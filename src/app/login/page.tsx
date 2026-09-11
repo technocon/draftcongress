@@ -13,7 +13,9 @@ export default async function LoginPage({
 
   return (
     <div className="max-w-sm mx-auto flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
+      <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+        Sign in
+      </h1>
 
       {error && (
         <p className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-700 dark:text-red-300">
@@ -41,13 +43,13 @@ export default async function LoginPage({
       >
         <label className="flex flex-col gap-1 text-sm">
           Email
-          <input name="email" type="email" required className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2" />
+          <input name="email" type="email" required className="rc-input" />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Password
-          <input name="password" type="password" required className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2" />
+          <input name="password" type="password" required className="rc-input" />
         </label>
-        <button type="submit" className="rounded-md bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-4 py-2 text-sm font-medium">
+        <button type="submit" className="btn-primary">
           Sign in
         </button>
       </form>
@@ -59,14 +61,17 @@ export default async function LoginPage({
             await signIn("google", { redirectTo: "/leagues" });
           }}
         >
-          <button type="submit" className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium">
+          <button type="submit" className="btn-secondary w-full">
             Continue with Google
           </button>
         </form>
       )}
 
-      <p className="text-sm text-neutral-500">
-        No account? <Link href="/register" className="underline">Create one</Link>
+      <p className="text-sm text-[var(--color-ink-soft)]">
+        No account?{" "}
+        <Link href="/register" className="text-[var(--color-accent)] hover:text-[var(--color-accent-dark)] underline">
+          Create one
+        </Link>
       </p>
     </div>
   );

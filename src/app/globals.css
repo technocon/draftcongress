@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
+/*
+ * Palette modeled on realclearpolitics.com's current look (checked via a
+ * Wayback Machine snapshot — the live site 403s automated browsers):
+ * dense white/off-white paper background, a near-black masthead/nav bar,
+ * brick-red headline links and accents, bold black section labels, and
+ * thin warm-gray rules between sections. Serif headlines over a plain
+ * sans body/UI — see layout.tsx's font setup.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-paper: #ffffff;
+  --color-paper-muted: #f7f5f1;
+  --color-ink: #1a1a1a;
+  --color-ink-soft: #55524c;
+  --color-accent: #9e1b1b;
+  --color-accent-dark: #7a1414;
+  --color-navy: #14161a;
+  --color-rule: #e4e0d8;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-paper: var(--color-paper);
+  --color-paper-muted: var(--color-paper-muted);
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
+  --color-navy: var(--color-navy);
+  --color-rule: var(--color-rule);
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-headline);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-paper: #121212;
+    --color-paper-muted: #1a1a1a;
+    --color-ink: #ededea;
+    --color-ink-soft: #a8a49c;
+    --color-accent: #c23b3b;
+    --color-accent-dark: #e05555;
+    --color-navy: #0a0b0d;
+    --color-rule: #2c2a26;
+
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  /* RCP-style headline link: bold serif, brick red, tightens on hover. */
+  .headline-link {
+    font-family: var(--font-serif), Georgia, serif;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  .headline-link:hover {
+    color: var(--color-accent-dark);
+    text-decoration: underline;
+  }
+
+  /* Small bold black label used for section/category headers. */
+  .section-label {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-ink);
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: #ffffff;
+    border-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-dark);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--color-ink);
+    border: 1px solid var(--color-rule);
+    border-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .btn-secondary:hover {
+    border-color: var(--color-ink-soft);
+  }
+
+  .rc-card {
+    background: var(--color-paper);
+    border: 1px solid var(--color-rule);
+    border-radius: 0.25rem;
+  }
+
+  .rc-rule {
+    border-color: var(--color-rule);
+  }
+
+  .rc-input {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border: 1px solid var(--color-rule);
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .rc-input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -1px;
+  }
 }

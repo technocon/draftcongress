@@ -23,22 +23,24 @@ export default async function CongressPage() {
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <h1 className="text-2xl font-semibold">Congress</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+          Congress
+        </h1>
+        <p className="text-sm text-[var(--color-ink-soft)] mt-1">
           Party and caucus composition of the seeded reference data — not real current membership, see prisma/seed.ts.
         </p>
       </div>
 
       {chamberData.map(({ chamber, party, blocs }) => (
         <section key={chamber.id} className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">
-            {chamber.name} <span className="text-sm text-neutral-500 font-normal">({chamber.totalSeats} seats)</span>
+          <h2 className="text-lg font-semibold border-b-2 border-[var(--color-accent)] pb-2">
+            {chamber.name} <span className="text-sm text-[var(--color-ink-soft)] font-normal">({chamber.totalSeats} seats)</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-md border border-neutral-200 dark:border-neutral-800 p-2">
+            <div className="rc-card p-2">
               <ChamberPartyChart title="Party composition" data={party} />
             </div>
-            <div className="rounded-md border border-neutral-200 dark:border-neutral-800 p-2">
+            <div className="rc-card p-2">
               <ChamberBlocChart title="Caucus / bloc membership" data={blocs} />
             </div>
           </div>

@@ -29,7 +29,7 @@ export function BlocLeaderboardChart({ data }: { data: BlocScore[] }) {
   };
 
   if (data.length === 0) {
-    return <p className="text-sm text-neutral-500">No blocs to rank yet.</p>;
+    return <p className="text-sm text-[var(--color-ink-soft)]">No blocs to rank yet.</p>;
   }
 
   return <EChart option={option} height={Math.max(200, sorted.length * 28 + 40)} />;

@@ -37,20 +37,17 @@ export default async function LeaguesPage({
       )}
 
       <section>
-        <h1 className="text-2xl font-semibold mb-4">Your leagues</h1>
+        <h1 className="text-2xl font-semibold mb-4 section-label">Your leagues</h1>
         {myLeagues.length === 0 ? (
-          <p className="text-neutral-500 text-sm">You&apos;re not in any leagues yet — create one below.</p>
+          <p className="text-[var(--color-ink-soft)] text-sm">You&apos;re not in any leagues yet — create one below.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {myLeagues.map((m) => (
-              <li key={m.leagueId}>
-                <Link
-                  href={`/leagues/${m.leagueId}`}
-                  className="block rounded-md border border-neutral-200 dark:border-neutral-800 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                >
-                  <span className="font-medium">{m.league.name}</span>
-                  <span className="ml-2 text-xs text-neutral-500">{m.role}</span>
+              <li key={m.leagueId} className="rc-card px-4 py-3 hover:bg-[var(--color-paper-muted)]">
+                <Link href={`/leagues/${m.leagueId}`} className="headline-link text-lg">
+                  {m.league.name}
                 </Link>
+                <span className="ml-2 text-xs text-[var(--color-ink-soft)]">{m.role}</span>
               </li>
             ))}
           </ul>
@@ -58,27 +55,20 @@ export default async function LeaguesPage({
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Create a league</h2>
+        <h2 className="text-lg font-semibold mb-3 section-label">Create a league</h2>
         {/* SRD A2: sensible defaults pre-filled — async draft, free-tier taxonomy, platform scoring config. */}
         <form action={createLeagueAction} className="flex flex-col gap-3 max-w-sm">
           <label className="flex flex-col gap-1 text-sm">
             League name
-            <input name="name" required className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2" />
+            <input name="name" required className="rc-input" />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Roster size
-            <input
-              name="rosterSize"
-              type="number"
-              defaultValue={8}
-              min={1}
-              max={50}
-              className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
-            />
+            <input name="rosterSize" type="number" defaultValue={8} min={1} max={50} className="rc-input" />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Redraft policy
-            <select name="redraftPolicy" defaultValue="full_redraft" className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2">
+            <select name="redraftPolicy" defaultValue="full_redraft" className="rc-input">
               <option value="full_redraft">Full redraft each cycle</option>
               <option value="keeper">Keeper — carry rosters over between cycles</option>
               <option value="admin_choice_per_cycle">Admin decides each cycle</option>
@@ -88,7 +78,7 @@ export default async function LeaguesPage({
             <input name="isPrivate" type="checkbox" defaultChecked />
             Private (invite-only)
           </label>
-          <button type="submit" className="rounded-md bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-4 py-2 text-sm font-medium">
+          <button type="submit" className="btn-primary">
             Create league
           </button>
         </form>
@@ -96,14 +86,14 @@ export default async function LeaguesPage({
 
       {browsableLeagues.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3">Public leagues</h2>
+          <h2 className="text-lg font-semibold mb-3 section-label">Public leagues</h2>
           <ul className="flex flex-col gap-2">
             {browsableLeagues.map((league) => (
-              <li key={league.id} className="flex items-center justify-between rounded-md border border-neutral-200 dark:border-neutral-800 px-4 py-3">
-                <span>{league.name}</span>
+              <li key={league.id} className="rc-card flex items-center justify-between px-4 py-3">
+                <span className="headline-link">{league.name}</span>
                 <form action={joinLeagueAction}>
                   <input type="hidden" name="leagueId" value={league.id} />
-                  <button type="submit" className="text-sm underline">
+                  <button type="submit" className="text-sm text-[var(--color-accent)] hover:text-[var(--color-accent-dark)] underline">
                     Join
                   </button>
                 </form>

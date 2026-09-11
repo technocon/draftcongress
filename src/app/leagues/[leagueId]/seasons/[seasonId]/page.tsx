@@ -61,11 +61,11 @@ export default async function SeasonDetailPage({
       )}
 
       <div>
-        <Link href={`/leagues/${leagueId}`} className="text-sm underline text-neutral-500">
+        <Link href={`/leagues/${leagueId}`} className="text-sm underline text-[var(--color-ink-soft)]">
           ← {season.league.name}
         </Link>
-        <h1 className="text-2xl font-semibold mt-1">
-          {season.electionCycle} season <span className="text-sm text-neutral-500 font-normal">({season.status})</span>
+        <h1 className="text-2xl font-semibold mt-1" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+          {season.electionCycle} season <span className="text-sm text-[var(--color-ink-soft)] font-normal">({season.status})</span>
         </h1>
       </div>
 
@@ -73,7 +73,7 @@ export default async function SeasonDetailPage({
         <form action={startDraftAction}>
           <input type="hidden" name="leagueId" value={leagueId} />
           <input type="hidden" name="seasonId" value={seasonId} />
-          <button type="submit" className="rounded-md bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-4 py-2 text-sm font-medium">
+          <button type="submit" className="btn-primary">
             Start draft
           </button>
         </form>
@@ -82,7 +82,7 @@ export default async function SeasonDetailPage({
       {season.draftEvent && (
         <Link
           href={`/draft/${season.draftEvent.id}?leagueId=${leagueId}`}
-          className="rounded-md border border-neutral-200 dark:border-neutral-800 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900 inline-block w-fit"
+          className="rc-card px-4 py-3 hover:bg-[var(--color-paper-muted)] inline-block w-fit headline-link"
         >
           {season.draftEvent.status === "complete" ? "View draft results →" : "Go to draft →"}
         </Link>
@@ -92,7 +92,7 @@ export default async function SeasonDetailPage({
         <form action={closeSeasonAction}>
           <input type="hidden" name="leagueId" value={leagueId} />
           <input type="hidden" name="seasonId" value={seasonId} />
-          <button type="submit" className="rounded-md border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium w-fit">
+          <button type="submit" className="btn-secondary w-fit">
             Close season
           </button>
         </form>
@@ -100,22 +100,25 @@ export default async function SeasonDetailPage({
 
       {standings.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3">Standings</h2>
+          <h2 className="text-lg font-semibold mb-3 section-label">Standings</h2>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="text-left border-b border-neutral-200 dark:border-neutral-800">
-                <th className="py-2 pr-4">Owner</th>
-                <th className="py-2">Score</th>
+              <tr className="text-left border-b-2 border-[var(--color-accent)]">
+                <th className="py-2 pr-4 section-label">Owner</th>
+                <th className="py-2 section-label">Score</th>
               </tr>
             </thead>
             <tbody>
               {standings.map((s, i) => (
-                <tr key={s.rosterId} className="border-b border-neutral-100 dark:border-neutral-900">
+                <tr
+                  key={s.rosterId}
+                  className={`border-b border-[var(--color-rule)] ${i % 2 === 1 ? "bg-[var(--color-paper-muted)]" : ""}`}
+                >
                   <td className="py-2 pr-4">
                     {i === 0 && "🏆 "}
                     {rosterOwnerById.get(s.rosterId)?.name ?? rosterOwnerById.get(s.rosterId)?.email}
                   </td>
-                  <td className="py-2">{s.score.toFixed(2)}</td>
+                  <td className="py-2 font-medium">{s.score.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -126,13 +129,15 @@ export default async function SeasonDetailPage({
       {isScored && draftedBlocIds.length > 0 && (
         <>
           <section>
-            <h2 className="text-lg font-semibold mb-3">Standings race</h2>
+            <h2 className="text-lg font-semibold mb-3 section-label">Standings race</h2>
             <StandingsRaceChart series={raceSeries} />
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold mb-3">Caucus leaderboard</h2>
-            <p className="text-xs text-neutral-500 mb-3">Every drafted bloc this season, ranked by weighted score — independent of who owns it.</p>
+            <h2 className="text-lg font-semibold mb-3 section-label">Caucus leaderboard</h2>
+            <p className="text-xs text-[var(--color-ink-soft)] mb-3">
+              Every drafted bloc this season, ranked by weighted score — independent of who owns it.
+            </p>
             <BlocLeaderboardChart data={blocLeaderboard} />
           </section>
         </>

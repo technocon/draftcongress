@@ -47,13 +47,15 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <h1 className="text-2xl font-semibold">Tenant admin</h1>
+      <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+        Tenant admin
+      </h1>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Leagues ({leagues.length})</h2>
+        <h2 className="text-lg font-semibold mb-3 section-label">Leagues ({leagues.length})</h2>
         <ul className="flex flex-col gap-1 text-sm">
           {leagues.map((l) => (
-            <li key={l.id} className="text-neutral-600 dark:text-neutral-400">
+            <li key={l.id} className="text-[var(--color-ink-soft)]">
               {l.name} <span className="text-xs">({l.draftFormat}, {l.isPrivate ? "private" : "public"})</span>
             </li>
           ))}
@@ -61,10 +63,10 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Users ({users.length})</h2>
+        <h2 className="text-lg font-semibold mb-3 section-label">Users ({users.length})</h2>
         <ul className="flex flex-col gap-1 text-sm">
           {users.map((m) => (
-            <li key={m.id} className="text-neutral-600 dark:text-neutral-400">
+            <li key={m.id} className="text-[var(--color-ink-soft)]">
               {m.user.name ?? m.user.email} <span className="text-xs">({m.role})</span>
             </li>
           ))}
@@ -72,13 +74,13 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Recent audit log</h2>
+        <h2 className="text-lg font-semibold mb-3 section-label">Recent audit log</h2>
         {recentAuditLog.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Nothing logged yet.</p>
+          <p className="text-[var(--color-ink-soft)] text-sm">Nothing logged yet.</p>
         ) : (
           <ul className="flex flex-col gap-1 text-xs font-mono">
             {recentAuditLog.map((entry) => (
-              <li key={entry.id} className="text-neutral-600 dark:text-neutral-400">
+              <li key={entry.id} className="text-[var(--color-ink-soft)]">
                 {entry.createdAt.toISOString()} · {entry.action} · {entry.entityType}/{entry.entityId.slice(0, 8)} ·
                 source={entry.source}
               </li>

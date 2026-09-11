@@ -21,7 +21,7 @@ export function ChamberBlocChart({ title, data }: { title: string; data: BlocSli
       {
         type: "bar",
         data: sorted.map((d) => d.count),
-        itemStyle: { color: "#0ea5e9", borderRadius: [0, 4, 4, 0] },
+        itemStyle: { color: "#9e1b1b", borderRadius: [0, 4, 4, 0] },
         label: { show: true, position: "right", fontSize: 10 },
       },
     ],
