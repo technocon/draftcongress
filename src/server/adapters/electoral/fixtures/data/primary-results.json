@@ -1,0 +1,10 @@
+[
+  {
+    "chamber": "house",
+    "externalId": "fixture-primary-oh-001",
+    "eventType": "primary_result",
+    "occurredAt": "2026-07-15T00:00:00.000Z",
+    "memberBioguideId": "S000003",
+    "description": "Primary election result (fixture)"
+  }
+]

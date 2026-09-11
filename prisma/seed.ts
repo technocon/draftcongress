@@ -19,7 +19,11 @@ const db = createAdminClient();
 
 const PUBLIC_TENANT_SLUG = process.env.PUBLIC_TENANT_SLUG ?? "public";
 
-async function main() {
+/** Exported so tests can seed reference data directly rather than shelling
+ * out to `npm run db:seed` — idempotent (upsert-based), safe to call
+ * repeatedly. Only auto-runs as a top-level script (see the
+ * import.meta.url guard at the bottom of this file). */
+export async function main() {
   const tenant = await db.tenant.upsert({
     where: { slug: PUBLIC_TENANT_SLUG },
     update: {},
@@ -179,22 +183,27 @@ async function main() {
   }
 
   // A handful of illustrative legislators, each seated in one free-tier bloc.
+  // bioguideId values here are fake-but-plausible (real bioguide IDs follow
+  // this LNNNNNN shape) and MUST match tests/fixtures + the fixture
+  // legislative/electoral adapters' RawEvent.memberBioguideId values, since
+  // that's the join key the ingestion job uses to resolve events to blocs.
   const legislators = [
-    { key: "leg-1", fullName: "Rep. A. Sample (Freedom Caucus seat)", chamber: house, party: "R", state: "TX", bloc: "house-freedom" },
-    { key: "leg-2", fullName: "Rep. B. Sample (House Dem seat)", chamber: house, party: "D", state: "CA", bloc: "house-dem" },
-    { key: "leg-3", fullName: "Rep. C. Sample (House GOP seat)", chamber: house, party: "R", state: "OH", bloc: "house-rep" },
-    { key: "leg-4", fullName: "Sen. D. Sample (Senate Dem seat)", chamber: senate, party: "D", state: "NY", bloc: "senate-dem" },
-    { key: "leg-5", fullName: "Sen. E. Sample (Senate GOP seat)", chamber: senate, party: "R", state: "TX", bloc: "senate-rep" },
-    { key: "leg-6", fullName: "Rep. F. Sample (Progressive Caucus seat)", chamber: house, party: "D", state: "WA", bloc: "progressive" },
+    { key: "leg-1", bioguideId: "S000001", fullName: "Rep. A. Sample (Freedom Caucus seat)", chamber: house, party: "R", state: "TX", bloc: "house-freedom" },
+    { key: "leg-2", bioguideId: "S000002", fullName: "Rep. B. Sample (House Dem seat)", chamber: house, party: "D", state: "CA", bloc: "house-dem" },
+    { key: "leg-3", bioguideId: "S000003", fullName: "Rep. C. Sample (House GOP seat)", chamber: house, party: "R", state: "OH", bloc: "house-rep" },
+    { key: "leg-4", bioguideId: "S000004", fullName: "Sen. D. Sample (Senate Dem seat)", chamber: senate, party: "D", state: "NY", bloc: "senate-dem" },
+    { key: "leg-5", bioguideId: "S000005", fullName: "Sen. E. Sample (Senate GOP seat)", chamber: senate, party: "R", state: "TX", bloc: "senate-rep" },
+    { key: "leg-6", bioguideId: "S000006", fullName: "Rep. F. Sample (Progressive Caucus seat)", chamber: house, party: "D", state: "WA", bloc: "progressive" },
   ];
 
   for (const l of legislators) {
     const legislator = await db.legislator.upsert({
       where: { id: deterministicId("leg", l.key) },
-      update: {},
+      update: { bioguideId: l.bioguideId, fullName: l.fullName, party: l.party, state: l.state },
       create: {
         id: deterministicId("leg", l.key),
         chamberId: l.chamber.id,
+        bioguideId: l.bioguideId,
         fullName: l.fullName,
         party: l.party,
         state: l.state,
@@ -207,7 +216,16 @@ async function main() {
     const existing = await db.blocMembership.findUnique({ where: { id: membershipId } });
     if (!existing) {
       await db.blocMembership.create({
-        data: { id: membershipId, blocId: bloc.id, legislatorId: legislator.id },
+        // Backdated well before any fixture ScoringEvent dates — the
+        // default `startDate: now()` would otherwise start membership
+        // AFTER the fixture data's occurredAt timestamps, so no active
+        // membership would ever be found at ingestion time.
+        data: {
+          id: membershipId,
+          blocId: bloc.id,
+          legislatorId: legislator.id,
+          startDate: new Date("2025-01-01T00:00:00.000Z"),
+        },
       });
     }
   }
@@ -250,11 +268,15 @@ function deterministicId(namespace: string, key: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await db.$disconnect();
-  });
+// Guard against auto-running when imported by the test suite (which sets
+// VITEST) rather than executed directly via `npm run db:seed`.
+if (!process.env.VITEST) {
+  main()
+    .catch((err) => {
+      console.error(err);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await db.$disconnect();
+    });
+}

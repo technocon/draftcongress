@@ -1,0 +1,18 @@
+[
+  {
+    "chamber": "house",
+    "externalId": "fixture-race-tx-result-001",
+    "eventType": "re_election_won",
+    "occurredAt": "2026-08-25T00:00:00.000Z",
+    "memberBioguideId": "S000001",
+    "description": "General election result (fixture)"
+  },
+  {
+    "chamber": "senate",
+    "externalId": "fixture-race-ny-result-001",
+    "eventType": "seat_flip",
+    "occurredAt": "2026-08-26T00:00:00.000Z",
+    "memberBioguideId": "S000004",
+    "description": "Seat changed party control (fixture)"
+  }
+]

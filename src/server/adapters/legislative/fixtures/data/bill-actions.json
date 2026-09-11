@@ -1,0 +1,42 @@
+[
+  {
+    "chamber": "house",
+    "externalId": "fixture-bill-hr1001-sponsor",
+    "eventType": "bill_sponsored",
+    "occurredAt": "2026-08-01T00:00:00.000Z",
+    "memberBioguideId": "S000001",
+    "description": "H.R. 1001 introduced (fixture)"
+  },
+  {
+    "chamber": "house",
+    "externalId": "fixture-bill-hr1001-passed",
+    "eventType": "bill_passed",
+    "occurredAt": "2026-08-15T00:00:00.000Z",
+    "memberBioguideId": "S000001",
+    "description": "H.R. 1001 passed the House (fixture)"
+  },
+  {
+    "chamber": "house",
+    "externalId": "fixture-bill-hr2002-sponsor",
+    "eventType": "bill_sponsored",
+    "occurredAt": "2026-08-03T00:00:00.000Z",
+    "memberBioguideId": "S000002",
+    "description": "H.R. 2002 introduced (fixture)"
+  },
+  {
+    "chamber": "senate",
+    "externalId": "fixture-bill-s3003-sponsor",
+    "eventType": "bill_sponsored",
+    "occurredAt": "2026-08-05T00:00:00.000Z",
+    "memberBioguideId": "S000004",
+    "description": "S. 3003 introduced (fixture)"
+  },
+  {
+    "chamber": "senate",
+    "externalId": "fixture-bill-s3003-passed",
+    "eventType": "bill_passed",
+    "occurredAt": "2026-08-20T00:00:00.000Z",
+    "memberBioguideId": "S000004",
+    "description": "S. 3003 passed the Senate (fixture)"
+  }
+]

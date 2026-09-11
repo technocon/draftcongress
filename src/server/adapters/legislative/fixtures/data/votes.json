@@ -1,0 +1,26 @@
+[
+  {
+    "chamber": "house",
+    "externalId": "fixture-vote-house-2026-08-10-001",
+    "eventType": "vote_cast",
+    "occurredAt": "2026-08-10T00:00:00.000Z",
+    "memberBioguideId": "S000001",
+    "description": "Roll call vote on H.R. 1001 (fixture)"
+  },
+  {
+    "chamber": "house",
+    "externalId": "fixture-vote-house-2026-08-10-002",
+    "eventType": "vote_cast",
+    "occurredAt": "2026-08-10T00:00:00.000Z",
+    "memberBioguideId": "S000003",
+    "description": "Roll call vote on H.R. 1001 (fixture)"
+  },
+  {
+    "chamber": "senate",
+    "externalId": "fixture-vote-senate-2026-08-18-001",
+    "eventType": "vote_cast",
+    "occurredAt": "2026-08-18T00:00:00.000Z",
+    "memberBioguideId": "S000005",
+    "description": "Roll call vote on S. 3003 (fixture)"
+  }
+]
