@@ -1,0 +1,78 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/session";
+import { createLeague } from "@/server/domain/leagues/create-league";
+import { joinLeague } from "@/server/domain/leagues/join-league";
+import { startSeason } from "@/server/domain/leagues/start-season";
+import { startDraft } from "@/server/domain/drafts/start-draft";
+
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+export async function createLeagueAction(formData: FormData) {
+  const session = await requireSession();
+  const name = String(formData.get("name") ?? "");
+  const rosterSize = Number(formData.get("rosterSize") ?? 8);
+  const isPrivate = formData.get("isPrivate") === "on";
+
+  let leagueId: string;
+  try {
+    const league = await createLeague(session.user.activeTenantId, session.user.id, {
+      name,
+      rosterSize,
+      isPrivate,
+    });
+    leagueId = league.id;
+  } catch (err) {
+    redirect(`/leagues?error=${encodeURIComponent(errMsg(err))}`);
+  }
+
+  redirect(`/leagues/${leagueId}`);
+}
+
+export async function joinLeagueAction(formData: FormData) {
+  const session = await requireSession();
+  const leagueId = String(formData.get("leagueId") ?? "");
+  await joinLeague(session.user.activeTenantId, leagueId, session.user.id);
+  redirect(`/leagues/${leagueId}`);
+}
+
+export async function startSeasonAction(formData: FormData) {
+  const session = await requireSession();
+  const leagueId = String(formData.get("leagueId") ?? "");
+  const electionCycle = String(formData.get("electionCycle") ?? "");
+  const startDate = String(formData.get("startDate") ?? "");
+  const endDate = String(formData.get("endDate") ?? "");
+
+  let seasonId: string;
+  try {
+    const season = await startSeason(session.user.activeTenantId, leagueId, {
+      electionCycle,
+      startDate,
+      endDate,
+    });
+    seasonId = season.id;
+  } catch (err) {
+    redirect(`/leagues/${leagueId}?error=${encodeURIComponent(errMsg(err))}`);
+  }
+
+  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+}
+
+export async function startDraftAction(formData: FormData) {
+  const session = await requireSession();
+  const leagueId = String(formData.get("leagueId") ?? "");
+  const seasonId = String(formData.get("seasonId") ?? "");
+
+  let draftEventId: string;
+  try {
+    const draftEvent = await startDraft(session.user.activeTenantId, seasonId);
+    draftEventId = draftEvent.id;
+  } catch (err) {
+    redirect(`/leagues/${leagueId}/seasons/${seasonId}?error=${encodeURIComponent(errMsg(err))}`);
+  }
+
+  redirect(`/draft/${draftEventId}?leagueId=${leagueId}`);
+}

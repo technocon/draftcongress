@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/server/db/client";
+import { withTenant } from "@/server/db/tenant-client";
 import { getPublicTenant } from "./tenant";
 import { resolveEntitlement, type Entitlement } from "./entitlement";
 
@@ -79,13 +80,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * which doesn't exist yet in Phase 1.
      */
     async createUser({ user }) {
-      if (!user.id) return;
+      const userId = user.id;
+      if (!userId) return;
       const tenant = await getPublicTenant();
-      await prisma.tenantMembership.upsert({
-        where: { tenantId_userId: { tenantId: tenant.id, userId: user.id } },
-        update: {},
-        create: { tenantId: tenant.id, userId: user.id, role: "member" },
-      });
+      // RLS-enforced (tenant-scoped) — must go through withTenant so
+      // app.current_tenant_id is set, or Postgres rejects the INSERT
+      // (same bug class as src/server/domain/auth/register.ts).
+      await withTenant(tenant.id, (tx) =>
+        tx.tenantMembership.upsert({
+          where: { tenantId_userId: { tenantId: tenant.id, userId } },
+          update: {},
+          create: { tenantId: tenant.id, userId, role: "member" },
+        })
+      );
     },
   },
   callbacks: {
