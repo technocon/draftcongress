@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/session";
 import { createLeague } from "@/server/domain/leagues/create-league";
 import { joinLeague } from "@/server/domain/leagues/join-league";
 import { startSeason } from "@/server/domain/leagues/start-season";
+import { closeSeason } from "@/server/domain/leagues/close-season";
 import { startDraft } from "@/server/domain/drafts/start-draft";
 
 function errMsg(err: unknown): string {
@@ -16,6 +17,11 @@ export async function createLeagueAction(formData: FormData) {
   const name = String(formData.get("name") ?? "");
   const rosterSize = Number(formData.get("rosterSize") ?? 8);
   const isPrivate = formData.get("isPrivate") === "on";
+  const redraftPolicyRaw = formData.get("redraftPolicy");
+  const redraftPolicy =
+    redraftPolicyRaw === "keeper" || redraftPolicyRaw === "admin_choice_per_cycle" || redraftPolicyRaw === "full_redraft"
+      ? redraftPolicyRaw
+      : undefined;
 
   let leagueId: string;
   try {
@@ -23,6 +29,7 @@ export async function createLeagueAction(formData: FormData) {
       name,
       rosterSize,
       isPrivate,
+      redraftPolicy,
     });
     leagueId = league.id;
   } catch (err) {
@@ -45,6 +52,8 @@ export async function startSeasonAction(formData: FormData) {
   const electionCycle = String(formData.get("electionCycle") ?? "");
   const startDate = String(formData.get("startDate") ?? "");
   const endDate = String(formData.get("endDate") ?? "");
+  const redraftChoiceRaw = formData.get("redraftChoice");
+  const redraftChoice = redraftChoiceRaw === "keeper" || redraftChoiceRaw === "full_redraft" ? redraftChoiceRaw : undefined;
 
   let seasonId: string;
   try {
@@ -52,10 +61,25 @@ export async function startSeasonAction(formData: FormData) {
       electionCycle,
       startDate,
       endDate,
+      redraftChoice,
     });
     seasonId = season.id;
   } catch (err) {
     redirect(`/leagues/${leagueId}?error=${encodeURIComponent(errMsg(err))}`);
+  }
+
+  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+}
+
+export async function closeSeasonAction(formData: FormData) {
+  const session = await requireSession();
+  const leagueId = String(formData.get("leagueId") ?? "");
+  const seasonId = String(formData.get("seasonId") ?? "");
+
+  try {
+    await closeSeason(session.user.activeTenantId, seasonId, session.user.id);
+  } catch (err) {
+    redirect(`/leagues/${leagueId}/seasons/${seasonId}?error=${encodeURIComponent(errMsg(err))}`);
   }
 
   redirect(`/leagues/${leagueId}/seasons/${seasonId}`);

@@ -76,6 +76,14 @@ export default async function LeaguesPage({
               className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
             />
           </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Redraft policy
+            <select name="redraftPolicy" defaultValue="full_redraft" className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2">
+              <option value="full_redraft">Full redraft each cycle</option>
+              <option value="keeper">Keeper — carry rosters over between cycles</option>
+              <option value="admin_choice_per_cycle">Admin decides each cycle</option>
+            </select>
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input name="isPrivate" type="checkbox" defaultChecked />
             Private (invite-only)

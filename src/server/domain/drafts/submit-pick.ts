@@ -4,6 +4,7 @@ import { requireEntitlement } from "@/server/auth/entitlement";
 import { DraftError } from "./errors";
 import { recordPick } from "./record-pick";
 import { resolveExpiredPicks } from "./auto-pick";
+import { computeTotalPicks } from "./draft-math";
 
 /**
  * User-submitted draft pick (SRD B1). See the architecture plan §5 for the
@@ -48,7 +49,7 @@ export async function submitDraftPick(tenantId: string, userId: string, draftEve
     });
 
     const pickOrder = draftEvent.pickOrder as string[];
-    const totalPicks = draftEvent.season.league.rosterSize * pickOrder.length;
+    const totalPicks = await computeTotalPicks(tx, draftEvent.seasonId, draftEvent.season.league.rosterSize, pickOrder.length);
 
     return recordPick(tx, draftEvent, totalPicks, roster.id, userId, blocId, false);
   });

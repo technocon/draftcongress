@@ -45,7 +45,7 @@ export default async function LeagueDetailPage({
         <h1 className="text-2xl font-semibold">{league.name}</h1>
         <p className="text-sm text-neutral-500 mt-1">
           {league.draftFormat} draft · {league.rosterSize}-bloc rosters · {league.blocTaxonomy.name} ·{" "}
-          {league.isPrivate ? "Private" : "Public"}
+          {league.isPrivate ? "Private" : "Public"} · {league.redraftPolicy.replace(/_/g, " ")}
         </p>
       </div>
 
@@ -103,6 +103,20 @@ export default async function LeagueDetailPage({
               End date
               <input name="endDate" type="date" required className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2" />
             </label>
+            {league.redraftPolicy === "admin_choice_per_cycle" && (
+              <label className="flex flex-col gap-1 text-sm">
+                This cycle&apos;s redraft policy
+                <select name="redraftChoice" defaultValue="full_redraft" className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2">
+                  <option value="full_redraft">Full redraft</option>
+                  <option value="keeper">Keeper (carry over prior season&apos;s blocs)</option>
+                </select>
+              </label>
+            )}
+            {league.redraftPolicy === "keeper" && league.seasons.length > 0 && (
+              <p className="text-xs text-neutral-500">
+                This league keeps blocs between seasons — returning owners&apos; rosters will carry over automatically.
+              </p>
+            )}
             <button type="submit" className="rounded-md bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-4 py-2 text-sm font-medium">
               Start new season
             </button>

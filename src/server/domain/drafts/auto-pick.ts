@@ -3,6 +3,7 @@ import { withTenant } from "@/server/db/tenant-client";
 import { resolveEntitlement } from "@/server/auth/entitlement";
 import { DraftError } from "./errors";
 import { recordPick } from "./record-pick";
+import { computeTotalPicks } from "./draft-math";
 
 /**
  * "Best available" auto-pick rule (SRD B2): lowest Bloc.draftRank among
@@ -65,7 +66,7 @@ export async function resolveExpiredPicks(tenantId: string, draftEventId: string
       if (!draftEvent.currentPickerUserId) return false;
 
       const pickOrder = draftEvent.pickOrder as string[];
-      const totalPicks = draftEvent.season.league.rosterSize * pickOrder.length;
+      const totalPicks = await computeTotalPicks(tx, draftEvent.seasonId, draftEvent.season.league.rosterSize, pickOrder.length);
 
       const roster = await tx.roster.findUniqueOrThrow({
         where: {

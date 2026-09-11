@@ -2,6 +2,7 @@ import { withTenant } from "@/server/db/tenant-client";
 import { prisma } from "@/server/db/client";
 import { DraftError } from "./errors";
 import { shuffle } from "./pick-order";
+import { computeTotalPicks } from "./draft-math";
 
 const DEFAULT_PICK_TIME_LIMIT_SECONDS = 24 * 60 * 60; // 24h — league-configurable later
 
@@ -32,33 +33,43 @@ export async function startDraft(tenantId: string, seasonId: string) {
       );
     }
 
-    const availableBlocs = await prisma.bloc.count({ where: { taxonomyId: season.league.blocTaxonomyId } });
-    const totalPicks = season.league.rosterSize * season.rosters.length;
+    // Total blocs in the taxonomy, minus any this season already carried
+    // over via a keeper policy (start-season.ts) — those are unavailable
+    // to draft again, they're already owned.
+    const taxonomyBlocCount = await prisma.bloc.count({ where: { taxonomyId: season.league.blocTaxonomyId } });
+    const keptCount = await tx.rosterBloc.count({ where: { seasonId, draftPickId: null } });
+    const availableBlocs = taxonomyBlocCount - keptCount;
+
+    const totalPicks = await computeTotalPicks(tx, seasonId, season.league.rosterSize, season.rosters.length);
     if (totalPicks > availableBlocs) {
       throw new DraftError(
         `Not enough blocs for this league: ${season.rosters.length} owners x ${season.league.rosterSize} roster size ` +
-          `= ${totalPicks} picks needed, but only ${availableBlocs} blocs exist in this taxonomy.`
+          `= ${totalPicks} picks still needed (after ${keptCount} kept blocs), but only ${availableBlocs} blocs remain available in this taxonomy.`
       );
     }
 
     const pickOrder = shuffle(season.rosters.map((r) => r.ownerUserId));
     const now = new Date();
+    // A fully-kept roster (rare — every slot already carried over) needs
+    // zero new picks: create the event already complete rather than
+    // leaving it "in_progress" with nothing left to pick.
+    const startsComplete = totalPicks <= 0;
 
     const draftEvent = await tx.draftEvent.create({
       data: {
         tenantId,
         seasonId,
         format: "async",
-        status: "in_progress",
+        status: startsComplete ? "complete" : "in_progress",
         pickOrder,
         pickTimeLimitSeconds: DEFAULT_PICK_TIME_LIMIT_SECONDS,
         currentPickIndex: 0,
-        currentPickerUserId: pickOrder[0],
-        currentPickDeadlineAt: new Date(now.getTime() + DEFAULT_PICK_TIME_LIMIT_SECONDS * 1000),
+        currentPickerUserId: startsComplete ? null : pickOrder[0],
+        currentPickDeadlineAt: startsComplete ? null : new Date(now.getTime() + DEFAULT_PICK_TIME_LIMIT_SECONDS * 1000),
       },
     });
 
-    await tx.season.update({ where: { id: seasonId }, data: { status: "drafting" } });
+    await tx.season.update({ where: { id: seasonId }, data: { status: startsComplete ? "active" : "drafting" } });
 
     return draftEvent;
   });
