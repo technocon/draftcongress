@@ -40,6 +40,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               Draft Congress
             </Link>
             <nav className="flex items-center gap-4 text-sm">
+              <Link href="/congress">Congress</Link>
               {session?.user ? (
                 <>
                   <Link href="/leagues">Leagues</Link>

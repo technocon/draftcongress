@@ -6,6 +6,8 @@ import { getDraftState } from "@/server/domain/drafts/get-draft-state";
 import { resolveEntitlement } from "@/server/auth/entitlement";
 import { submitDraftPickAction } from "@/server/actions/drafts";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { computeBlocLeaderboard } from "@/server/domain/charts/bloc-leaderboard";
+import { BlocLeaderboardChart } from "@/components/charts/bloc-leaderboard-chart";
 
 export default async function DraftBoardPage({
   params,
@@ -36,6 +38,15 @@ export default async function DraftBoardPage({
   const entitlement = await resolveEntitlement(session.user.id, tenantId);
   const isMyTurn = draftEvent.status === "in_progress" && draftEvent.currentPickerUserId === session.user.id;
   const pickOrder = draftEvent.pickOrder as string[];
+
+  const weights = {
+    legislative: draftEvent.season.league.scoringConfig.legislativeWeight,
+    electoral: draftEvent.season.league.scoringConfig.electoralWeight,
+  };
+  const blocLeaderboard = await computeBlocLeaderboard({
+    taxonomyId: draftEvent.season.league.blocTaxonomyId,
+    weights,
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -107,6 +118,16 @@ export default async function DraftBoardPage({
               })}
             </ul>
           )}
+        </section>
+      )}
+
+      {blocLeaderboard.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Caucus races</h2>
+          <p className="text-xs text-neutral-500 mb-3">
+            Every bloc in this draft pool, ranked by weighted score so far — a quick read on who&apos;s racking up points.
+          </p>
+          <BlocLeaderboardChart data={blocLeaderboard} />
         </section>
       )}
 

@@ -17,7 +17,7 @@ export async function getDraftState(tenantId: string, draftEventId: string) {
       where: { id: draftEventId },
       include: {
         picks: { orderBy: { pickNumber: "asc" }, include: { bloc: true, owner: { select: { id: true, name: true } } } },
-        season: { include: { league: true } },
+        season: { include: { league: { include: { scoringConfig: true } } } },
       },
     })
   );
