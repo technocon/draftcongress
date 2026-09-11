@@ -1,5 +1,6 @@
 import type { DraftEvent } from "@prisma/client";
 import type { TenantScopedClient } from "@/server/db/tenant-client";
+import { writeAuditLog } from "@/server/domain/audit/log";
 import { DraftError } from "./errors";
 
 /**
@@ -48,6 +49,18 @@ export async function recordPick(
     // against a concurrent pick for the same bloc.
     throw new DraftError("This bloc was just claimed by another owner — pick again");
   }
+
+  // Epic G2: every draft pick is an auditable action, same transaction as
+  // the pick itself so the log can't drift from what actually happened.
+  await writeAuditLog(tx, {
+    tenantId: draftEvent.tenantId,
+    actorUserId: isAutoPick ? null : ownerUserId,
+    action: isAutoPick ? "draft_pick.auto" : "draft_pick.submitted",
+    entityType: "DraftPick",
+    entityId: draftPick.id,
+    after: { draftEventId: draftEvent.id, rosterId, ownerUserId, blocId, pickNumber },
+    source: isAutoPick ? "auto-pick" : "user",
+  });
 
   const pickOrder = draftEvent.pickOrder as string[];
   const nextIndex = pickNumber;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { withTenant } from "@/server/db/tenant-client";
 import { prisma } from "@/server/db/client";
+import { writeAuditLog } from "@/server/domain/audit/log";
 
 const createLeagueSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -32,8 +33,8 @@ export async function createLeague(tenantId: string, adminUserId: string, input:
     parsed.scoringConfigId ? null : prisma.scoringConfig.findFirstOrThrow({ where: { tenantId: null } }),
   ]);
 
-  return withTenant(tenantId, (tx) =>
-    tx.league.create({
+  return withTenant(tenantId, async (tx) => {
+    const league = await tx.league.create({
       data: {
         tenantId,
         name: parsed.name,
@@ -49,6 +50,18 @@ export async function createLeague(tenantId: string, adminUserId: string, input:
         },
       },
       include: { memberships: true },
-    })
-  );
+    });
+
+    await writeAuditLog(tx, {
+      tenantId,
+      actorUserId: adminUserId,
+      action: "league.created",
+      entityType: "League",
+      entityId: league.id,
+      after: { name: league.name, rosterSize: league.rosterSize, isPrivate: league.isPrivate },
+      source: "user",
+    });
+
+    return league;
+  });
 }
