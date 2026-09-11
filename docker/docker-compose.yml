@@ -1,0 +1,39 @@
+# LOCAL DEV ONLY. Provides a Postgres instance for `npm run dev` to talk to.
+# Production does not run in a container — Hostinger's Node.js hosting
+# (hPanel's app manager) runs `node` directly; see README.md and
+# scripts/deploy.sh. Production Postgres is Neon, not this container.
+#
+# Usage: docker compose -f docker/docker-compose.yml up -d
+name: draft-congress-dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: draft_congress
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      # Host port 5433 — 5432 is often already taken by another local
+      # Postgres container; adjust here if 5433 is also in use.
+      - "5433:5432"
+    volumes:
+      - draft-congress-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  draft-congress-db-data:

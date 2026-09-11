@@ -1,0 +1,595 @@
+// Draft Congress — Phase 1 domain model.
+//
+// Two categories of table, per the architecture plan:
+//   1. Reference/content data — no tenant_id, no RLS. Objective real-world facts
+//      (legislators, blocs, scoring rules/events) that are identical regardless
+//      of which tenant's league is viewing them.
+//   2. Tenant-scoped operational data — tenant_id NOT NULL, RLS-enforced.
+//      League/season/roster/draft/billing state that must never leak across tenants.
+//
+// BlocTaxonomy and ScoringConfig are the documented exception: tenant_id is
+// nullable, where null means "platform default" (see prisma/rls/003_policies.sql).
+//
+// RLS is enforced at the Postgres level (see prisma/rls/*.sql), not just here —
+// this schema defines shape, not access control.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Prisma Migrate (DDL) needs an unpooled connection; Neon's pooled
+  // connection string (transaction-mode PgBouncer) is used by directUrl's
+  // counterpart, the app runtime client, via DATABASE_URL instead.
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js identity tables (personal identity — cross-tenant by design, SRD §5.1)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  passwordHash  String?   @map("password_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  accounts          Account[]
+  sessions          Session[]
+  tenantMemberships TenantMembership[]
+  leagueMemberships LeagueMembership[]
+  adminOfLeagues    League[]           @relation("LeagueAdmin")
+  rosters           Roster[]
+  draftPicks        DraftPick[]
+  subscription      Subscription?
+  auditLogEntries   AuditLog[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+enum TenantType {
+  public
+  white_label
+  enterprise
+}
+
+model Tenant {
+  id           String     @id @default(uuid()) @db.Uuid
+  slug         String     @unique
+  type         TenantType @default(public)
+  name         String
+  brandingJson Json?      @map("branding_json")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  memberships     TenantMembership[]
+  leagues         League[]
+  blocTaxonomies  BlocTaxonomy[]
+  scoringConfigs  ScoringConfig[]
+  entitlement     TenantEntitlement?
+  auditLogEntries AuditLog[]
+
+  @@map("tenants")
+}
+
+enum TenantMemberRole {
+  member
+  admin
+}
+
+// The hybrid-identity mapping layer (SRD §5.1): a user can hold a personal
+// identity AND a tenant-issued identity without the platform silently
+// merging them. Phase 1 only ever auto-creates a membership in the seeded
+// public tenant; the shape is here so white-label tenants aren't a rewrite.
+model TenantMembership {
+  id       String           @id @default(uuid()) @db.Uuid
+  tenantId String           @map("tenant_id") @db.Uuid
+  userId   String           @map("user_id") @db.Uuid
+  role     TenantMemberRole @default(member)
+  joinedAt DateTime         @default(now()) @map("joined_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@map("tenant_memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Reference data: Legislative Body / Chamber (SRD §6.1) — content, not tenant data
+// ---------------------------------------------------------------------------
+
+enum LegislativeLevel {
+  national
+  state
+  county
+  city
+  international
+}
+
+model LegislativeBody {
+  id           String           @id @default(uuid()) @db.Uuid
+  country      String
+  level        LegislativeLevel
+  name         String
+  chamberCount Int              @map("chamber_count")
+  isActive     Boolean          @default(false) @map("is_active")
+
+  chambers Chamber[]
+
+  @@map("legislative_bodies")
+}
+
+model Chamber {
+  id                String @id @default(uuid()) @db.Uuid
+  legislativeBodyId String @map("legislative_body_id") @db.Uuid
+  name              String
+  totalSeats        Int    @map("total_seats")
+  majorityThreshold Int    @map("majority_threshold")
+
+  legislativeBody LegislativeBody @relation(fields: [legislativeBodyId], references: [id], onDelete: Cascade)
+  blocs           Bloc[]
+  legislators     Legislator[]
+
+  @@map("chambers")
+}
+
+// ---------------------------------------------------------------------------
+// Reference data: individual member-level data (SRD §6.2 — required even
+// though blocs, not legislators, are the draftable unit)
+// ---------------------------------------------------------------------------
+
+enum LegislatorStatus {
+  active
+  former
+}
+
+model Legislator {
+  id         String           @id @default(uuid()) @db.Uuid
+  chamberId  String           @map("chamber_id") @db.Uuid
+  bioguideId String?          @unique @map("bioguide_id")
+  fullName   String           @map("full_name")
+  party      String
+  state      String
+  district   String?
+  status     LegislatorStatus @default(active)
+  termStart  DateTime?        @map("term_start")
+  termEnd    DateTime?        @map("term_end")
+
+  chamber         Chamber          @relation(fields: [chamberId], references: [id], onDelete: Cascade)
+  blocMemberships BlocMembership[]
+  scoringEvents   ScoringEvent[]
+
+  @@index([chamberId])
+  @@map("legislators")
+}
+
+// ---------------------------------------------------------------------------
+// Reference data: Bloc taxonomy + Bloc (SRD §6.2). BlocTaxonomy is the
+// documented nullable-tenant exception — null tenant_id means platform default.
+// ---------------------------------------------------------------------------
+
+enum BlocTier {
+  free
+  paid
+}
+
+model BlocTaxonomy {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String?  @map("tenant_id") @db.Uuid // null = platform default
+  name         String
+  tierRequired BlocTier @default(free) @map("tier_required")
+
+  tenant  Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  blocs   Bloc[]
+  leagues League[]
+
+  @@map("bloc_taxonomies")
+}
+
+enum BlocType {
+  leadership
+  ideological
+  policy
+  custom
+}
+
+model Bloc {
+  id         String   @id @default(uuid()) @db.Uuid
+  chamberId  String   @map("chamber_id") @db.Uuid
+  taxonomyId String   @map("taxonomy_id") @db.Uuid
+  name       String
+  blocType   BlocType @map("bloc_type")
+  isPaidTier Boolean  @default(false) @map("is_paid_tier")
+  // Seeded placeholder rank used by the auto-pick "best available" fallback
+  // (SRD B2) — lower is better. Needs a real ranking methodology before launch.
+  draftRank  Int      @default(0) @map("draft_rank")
+
+  chamber       Chamber          @relation(fields: [chamberId], references: [id], onDelete: Cascade)
+  taxonomy      BlocTaxonomy     @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+  memberships   BlocMembership[]
+  rosterBlocs   RosterBloc[]
+  draftPicks    DraftPick[]
+  scoringEvents ScoringEvent[]
+
+  @@index([taxonomyId])
+  @@index([chamberId])
+  @@map("blocs")
+}
+
+// Replaces the SRD's literal member_ids array with a date-ranged join table,
+// so mid-season composition changes (open question #9) are representable
+// without rewriting history.
+model BlocMembership {
+  id           String    @id @default(uuid()) @db.Uuid
+  blocId       String    @map("bloc_id") @db.Uuid
+  legislatorId String    @map("legislator_id") @db.Uuid
+  startDate    DateTime  @default(now()) @map("start_date")
+  endDate      DateTime? @map("end_date")
+
+  bloc       Bloc       @relation(fields: [blocId], references: [id], onDelete: Cascade)
+  legislator Legislator @relation(fields: [legislatorId], references: [id], onDelete: Cascade)
+
+  @@index([blocId])
+  @@index([legislatorId])
+  @@map("bloc_memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Reference data: Scoring config/rules/events (SRD §6.4). ScoringConfig is
+// the second documented nullable-tenant exception (tenant-adjustable weights).
+// ---------------------------------------------------------------------------
+
+model ScoringConfig {
+  id                String  @id @default(uuid()) @db.Uuid
+  tenantId          String? @map("tenant_id") @db.Uuid // null = platform default
+  legislativeWeight Float   @default(0.5) @map("legislative_weight")
+  electoralWeight   Float   @default(0.5) @map("electoral_weight")
+
+  tenant  Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rules   ScoringRule[]
+  leagues League[]
+
+  @@map("scoring_configs")
+}
+
+enum ScoringEventType {
+  bill_passed
+  bill_sponsored
+  vote_cast
+  committee_action
+  re_election_won
+  seat_flip
+  primary_result
+}
+
+model ScoringRule {
+  id              String           @id @default(uuid()) @db.Uuid
+  scoringConfigId String           @map("scoring_config_id") @db.Uuid
+  eventType       ScoringEventType @map("event_type")
+  points          Float
+  appliesToTier   BlocTier         @default(free) @map("applies_to_tier")
+
+  scoringConfig ScoringConfig @relation(fields: [scoringConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([scoringConfigId, eventType])
+  @@map("scoring_rules")
+}
+
+// A raw scored fact ("this bill passed", "this seat flipped") — identical
+// regardless of which tenant/league is viewing it. Idempotent on
+// (source, externalId) so the ingestion job can safely re-run.
+model ScoringEvent {
+  id            String           @id @default(uuid()) @db.Uuid
+  blocId        String           @map("bloc_id") @db.Uuid
+  legislatorId  String?          @map("legislator_id") @db.Uuid
+  eventType     ScoringEventType @map("event_type")
+  pointsAwarded Float            @map("points_awarded")
+  source        String
+  externalId    String           @map("external_id")
+  occurredAt    DateTime         @map("occurred_at")
+  ingestedAt    DateTime         @default(now()) @map("ingested_at")
+
+  bloc       Bloc        @relation(fields: [blocId], references: [id], onDelete: Cascade)
+  legislator Legislator? @relation(fields: [legislatorId], references: [id], onDelete: SetNull)
+
+  @@unique([source, externalId])
+  @@index([blocId])
+  @@map("scoring_events")
+}
+
+// ---------------------------------------------------------------------------
+// Tenant-scoped: League / Season / Roster / Draft (SRD §6.3)
+// ---------------------------------------------------------------------------
+
+enum DraftFormat {
+  snake
+  async
+  auction
+  custom
+}
+
+enum RedraftPolicy {
+  full_redraft
+  keeper
+  admin_choice_per_cycle
+}
+
+model League {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  name            String
+  adminUserId     String        @map("admin_user_id") @db.Uuid
+  blocTaxonomyId  String        @map("bloc_taxonomy_id") @db.Uuid
+  scoringConfigId String        @map("scoring_config_id") @db.Uuid
+  draftFormat     DraftFormat   @default(async) @map("draft_format")
+  redraftPolicy   RedraftPolicy @default(full_redraft) @map("redraft_policy")
+  isPrivate       Boolean       @default(true) @map("is_private")
+  // Not in the SRD's literal schema — needed to know how many draft rounds
+  // run and to validate league size against available blocs (open question #5).
+  rosterSize      Int           @default(8) @map("roster_size")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  admin         User               @relation("LeagueAdmin", fields: [adminUserId], references: [id])
+  blocTaxonomy  BlocTaxonomy       @relation(fields: [blocTaxonomyId], references: [id])
+  scoringConfig ScoringConfig      @relation(fields: [scoringConfigId], references: [id])
+  memberships   LeagueMembership[]
+  seasons       Season[]
+
+  @@index([tenantId])
+  @@map("leagues")
+}
+
+enum LeagueRole {
+  owner
+  admin
+}
+
+model LeagueMembership {
+  id       String     @id @default(uuid()) @db.Uuid
+  tenantId String     @map("tenant_id") @db.Uuid
+  leagueId String     @map("league_id") @db.Uuid
+  userId   String     @map("user_id") @db.Uuid
+  role     LeagueRole @default(owner)
+  joinedAt DateTime   @default(now()) @map("joined_at")
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, userId])
+  @@index([tenantId])
+  @@map("league_memberships")
+}
+
+enum SeasonStatus {
+  pre_draft
+  drafting
+  active
+  closed
+}
+
+model Season {
+  id            String       @id @default(uuid()) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
+  leagueId      String       @map("league_id") @db.Uuid
+  electionCycle String       @map("election_cycle")
+  status        SeasonStatus @default(pre_draft)
+  startDate     DateTime     @map("start_date")
+  endDate       DateTime     @map("end_date")
+
+  league     League      @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  rosters    Roster[]
+  draftEvent DraftEvent?
+
+  @@index([tenantId])
+  @@index([leagueId])
+  @@map("seasons")
+}
+
+model Roster {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  seasonId    String @map("season_id") @db.Uuid
+  ownerUserId String @map("owner_user_id") @db.Uuid
+
+  season      Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  owner       User         @relation(fields: [ownerUserId], references: [id])
+  rosterBlocs RosterBloc[]
+  draftPicks  DraftPick[]
+
+  @@unique([seasonId, ownerUserId])
+  @@index([tenantId])
+  @@map("rosters")
+}
+
+// Join table replacing the SRD's bloc_ids array. The unique constraint on
+// (seasonId, blocId) is the actual bloc-scarcity enforcement mechanism
+// (open question #5) — a bloc can only be owned once per season, full stop.
+model RosterBloc {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  rosterId    String   @map("roster_id") @db.Uuid
+  seasonId    String   @map("season_id") @db.Uuid // denormalized from roster.seasonId for the unique constraint below
+  blocId      String   @map("bloc_id") @db.Uuid
+  draftPickId String?  @unique @map("draft_pick_id") @db.Uuid
+  acquiredAt  DateTime @default(now()) @map("acquired_at")
+
+  roster    Roster     @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  bloc      Bloc       @relation(fields: [blocId], references: [id])
+  draftPick DraftPick? @relation(fields: [draftPickId], references: [id])
+
+  @@unique([seasonId, blocId])
+  @@index([tenantId])
+  @@index([rosterId])
+  @@map("roster_blocs")
+}
+
+enum DraftEventStatus {
+  scheduled
+  in_progress
+  complete
+}
+
+model DraftEvent {
+  id                    String           @id @default(uuid()) @db.Uuid
+  tenantId              String           @map("tenant_id") @db.Uuid
+  seasonId              String           @unique @map("season_id") @db.Uuid
+  format                DraftFormat      @default(async)
+  status                DraftEventStatus @default(scheduled)
+  pickOrder             Json             @map("pick_order") // string[] of userIds, round-robin
+  pickTimeLimitSeconds  Int              @default(86400) @map("pick_time_limit_seconds")
+  currentPickIndex      Int              @default(0) @map("current_pick_index")
+  currentPickerUserId   String?          @map("current_picker_user_id") @db.Uuid
+  currentPickDeadlineAt DateTime?        @map("current_pick_deadline_at")
+
+  season Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  picks  DraftPick[]
+
+  @@index([tenantId])
+  @@map("draft_events")
+}
+
+model DraftPick {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  draftEventId String   @map("draft_event_id") @db.Uuid
+  rosterId     String   @map("roster_id") @db.Uuid
+  ownerUserId  String   @map("owner_user_id") @db.Uuid
+  blocId       String   @map("bloc_id") @db.Uuid
+  pickNumber   Int      @map("pick_number")
+  isAutoPick   Boolean  @default(false) @map("is_auto_pick")
+  pickedAt     DateTime @default(now()) @map("picked_at")
+
+  draftEvent DraftEvent  @relation(fields: [draftEventId], references: [id], onDelete: Cascade)
+  roster     Roster      @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  owner      User        @relation(fields: [ownerUserId], references: [id])
+  bloc       Bloc        @relation(fields: [blocId], references: [id])
+  rosterBloc RosterBloc?
+
+  @@unique([draftEventId, pickNumber])
+  @@index([tenantId])
+  @@map("draft_picks")
+}
+
+// ---------------------------------------------------------------------------
+// Billing / entitlement (Epic E). Subscription is deliberately NOT
+// tenant-scoped: a personal subscription unlocks paid-tier data in ANY
+// league the user joins (SRD E1, "not tied to a single league"), so it's
+// resolved by userId the same way User/Account/Session are — never through
+// tenant RLS. TenantEntitlement (an org granting paid tier to all its users)
+// IS the tenant-scoped billing table.
+// ---------------------------------------------------------------------------
+
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+  incomplete
+}
+
+enum SubscriptionTier {
+  free
+  paid
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @unique @map("user_id") @db.Uuid
+  stripeCustomerId     String?            @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  status               SubscriptionStatus @default(incomplete)
+  tier                 SubscriptionTier   @default(free)
+  currentPeriodEnd     DateTime?          @map("current_period_end")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// Org-level grant: tenant admin flips this on to give every user in their
+// tenant paid-tier access regardless of individual subscription (SRD E2).
+model TenantEntitlement {
+  tenantId                 String  @id @map("tenant_id") @db.Uuid
+  grantsPaidTierToAllUsers Boolean @default(false) @map("grants_paid_tier_to_all_users")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_entitlements")
+}
+
+// ---------------------------------------------------------------------------
+// Audit (Epic G2). tenantId is nullable: platform-level entries (tenantId
+// null) are only ever written/read via the bypass-RLS platform client, never
+// through a tenant-scoped session — the RLS policy on this table does NOT
+// carry a "tenant_id IS NULL" clause for that reason (see 003_policies.sql).
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  beforeJson  Json?    @map("before_json")
+  afterJson   Json?    @map("after_json")
+  source      String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
