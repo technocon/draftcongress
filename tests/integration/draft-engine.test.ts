@@ -22,7 +22,7 @@ import { DraftError } from "../../src/server/domain/drafts/errors";
 const admin = createAdminClient();
 
 let tenant: { id: string };
-let admin1: { id: string }; // league admin, does not play
+let admin1: { id: string }; // league admin — also gets a roster (admin is a permission, not a separate non-playing role)
 let owner1: { id: string };
 let owner2: { id: string };
 let owner3: { id: string };
@@ -62,16 +62,18 @@ describe("async draft engine", () => {
     const draftEvent = await startDraft(tenant.id, season.id);
     expect(draftEvent.status).toBe("in_progress");
     const pickOrder = draftEvent.pickOrder as string[];
-    expect(pickOrder).toHaveLength(3);
+    // admin1 + owner1 + owner2 + owner3 — every league member gets a
+    // roster, admin included (see start-season.ts).
+    expect(pickOrder).toHaveLength(4);
 
-    // Free taxonomy has 5 seeded blocs; find 3 unclaimed free-tier ones to draft.
+    // Free taxonomy has 5 seeded blocs; find 4 unclaimed free-tier ones to draft.
     const freeBlocs = await admin.bloc.findMany({
       where: { taxonomyId: league.blocTaxonomyId, isPaidTier: false },
       orderBy: { draftRank: "asc" },
     });
-    expect(freeBlocs.length).toBeGreaterThanOrEqual(3);
+    expect(freeBlocs.length).toBeGreaterThanOrEqual(4);
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const currentUserId = pickOrder[i];
       const pick = await submitDraftPick(tenant.id, currentUserId, draftEvent.id, freeBlocs[i].id);
       expect(pick.ownerUserId).toBe(currentUserId);
@@ -80,7 +82,7 @@ describe("async draft engine", () => {
 
     const finalState = await getDraftState(tenant.id, draftEvent.id);
     expect(finalState.status).toBe("complete");
-    expect(finalState.picks).toHaveLength(3);
+    expect(finalState.picks).toHaveLength(4);
 
     const finishedSeason = await withTenant(tenant.id, (tx) => tx.season.findUniqueOrThrow({ where: { id: season.id } }));
     expect(finishedSeason.status).toBe("active");
@@ -97,7 +99,9 @@ describe("async draft engine", () => {
     });
     const draftEvent = await startDraft(tenant.id, season.id);
     const pickOrder = draftEvent.pickOrder as string[];
-    const outOfTurnUserId = pickOrder[0] === owner1.id ? owner2.id : owner1.id;
+    // admin1 + owner1 + owner2 all get a roster now — pick whichever
+    // isn't first, regardless of shuffle order.
+    const outOfTurnUserId = [admin1.id, owner1.id, owner2.id].find((id) => id !== pickOrder[0])!;
 
     const bloc = await admin.bloc.findFirstOrThrow({ where: { taxonomyId: league.blocTaxonomyId, isPaidTier: false } });
     await expect(submitDraftPick(tenant.id, outOfTurnUserId, draftEvent.id, bloc.id)).rejects.toThrow(DraftError);
@@ -118,8 +122,12 @@ describe("async draft engine", () => {
     });
     const draftEvent = await startDraft(tenant.id, season.id);
 
+    // admin1 + owner1 both get a roster now; submit as whoever is
+    // actually first so this only exercises the entitlement rejection,
+    // not a turn-order rejection.
+    const firstPickerUserId = (draftEvent.pickOrder as string[])[0];
     const paidBloc = await admin.bloc.findFirstOrThrow({ where: { taxonomyId: paidTaxonomy.id, isPaidTier: true } });
-    await expect(submitDraftPick(tenant.id, owner1.id, draftEvent.id, paidBloc.id)).rejects.toThrow();
+    await expect(submitDraftPick(tenant.id, firstPickerUserId, draftEvent.id, paidBloc.id)).rejects.toThrow();
   });
 
   it("rejects starting a draft when rosterSize x ownerCount exceeds available blocs", async () => {

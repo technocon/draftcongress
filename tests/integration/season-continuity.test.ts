@@ -47,13 +47,15 @@ describe("season continuity (redraft/keeper)", () => {
   it("a keeper league carries blocs into a new season and only drafts the remaining slots", async () => {
     const league = await createLeague(tenant.id, adminUser.id, {
       name: "Keeper League",
-      rosterSize: 2,
+      rosterSize: 1,
       redraftPolicy: "keeper",
     });
     await joinLeague(tenant.id, league.id, owner1.id);
     await joinLeague(tenant.id, league.id, owner2.id);
 
-    // --- Season 1: full draft, 2 owners x 2-bloc rosters = 4 picks ---
+    // --- Season 1: full draft. Every league member gets a roster,
+    // including the admin (see start-season.ts) — 3 members x 1-bloc
+    // rosters = 3 picks. ---
     const season1 = await startSeason(tenant.id, league.id, {
       electionCycle: "2026",
       startDate: "2026-01-01",
@@ -61,22 +63,23 @@ describe("season continuity (redraft/keeper)", () => {
     });
     const draft1 = await startDraft(tenant.id, season1.id);
     const order1 = draft1.pickOrder as string[];
+    expect(order1).toHaveLength(3);
 
     const freeBlocs = await admin.bloc.findMany({
       where: { taxonomyId: league.blocTaxonomyId, isPaidTier: false },
       orderBy: { draftRank: "asc" },
     });
-    expect(freeBlocs.length).toBeGreaterThanOrEqual(4);
+    expect(freeBlocs.length).toBeGreaterThanOrEqual(3);
 
-    for (let i = 0; i < 4; i++) {
-      await submitDraftPick(tenant.id, order1[i % order1.length], draft1.id, freeBlocs[i].id);
+    for (let i = 0; i < 3; i++) {
+      await submitDraftPick(tenant.id, order1[i], draft1.id, freeBlocs[i].id);
     }
 
     const season1Rosters = await withTenant(tenant.id, (tx) =>
       tx.roster.findMany({ where: { seasonId: season1.id }, include: { rosterBlocs: true } })
     );
     for (const r of season1Rosters) {
-      expect(r.rosterBlocs).toHaveLength(2);
+      expect(r.rosterBlocs).toHaveLength(1);
     }
 
     // --- Close season 1, start season 2: keeper should pre-populate rosters ---
@@ -93,12 +96,12 @@ describe("season continuity (redraft/keeper)", () => {
     );
     for (const r of season2RostersBeforeDraft) {
       // Kept blocs carried over, with no draftPickId (never drafted this cycle).
-      expect(r.rosterBlocs).toHaveLength(2);
+      expect(r.rosterBlocs).toHaveLength(1);
       expect(r.rosterBlocs.every((rb) => rb.draftPickId === null)).toBe(true);
     }
 
-    // Roster is already full (2/2 kept) — starting a draft with rosterSize
-    // unchanged at 2 should need ZERO new picks and complete immediately.
+    // Roster is already full (1/1 kept) — starting a draft with rosterSize
+    // unchanged at 1 should need ZERO new picks and complete immediately.
     const draft2 = await startDraft(tenant.id, season2.id);
     expect(draft2.status).toBe("complete");
     expect(draft2.currentPickerUserId).toBeNull();
@@ -121,8 +124,17 @@ describe("season continuity (redraft/keeper)", () => {
       endDate: "2026-12-31",
     });
     const draft1 = await startDraft(tenant.id, season1.id);
-    const bloc = await admin.bloc.findFirstOrThrow({ where: { taxonomyId: league.blocTaxonomyId, isPaidTier: false } });
-    await submitDraftPick(tenant.id, owner1.id, draft1.id, bloc.id);
+    // Admin + owner1 both get a roster now — draft both picks (in
+    // whatever turn order got shuffled) so the season actually completes
+    // and can be closed.
+    const order1 = draft1.pickOrder as string[];
+    expect(order1).toHaveLength(2);
+    const blocs = await admin.bloc.findMany({
+      where: { taxonomyId: league.blocTaxonomyId, isPaidTier: false },
+      take: 2,
+    });
+    await submitDraftPick(tenant.id, order1[0], draft1.id, blocs[0].id);
+    await submitDraftPick(tenant.id, order1[1], draft1.id, blocs[1].id);
     await closeSeason(tenant.id, season1.id, adminUser.id);
 
     const season2 = await startSeason(tenant.id, league.id, {

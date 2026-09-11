@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { requireSession } from "@/lib/session";
 import { withTenant } from "@/server/db/tenant-client";
-import { joinLeagueAction, startSeasonAction } from "@/server/actions/leagues";
+import { joinLeagueAction, startSeasonAction, inviteOwnerAction } from "@/server/actions/leagues";
 
 export default async function LeagueDetailPage({
   params,
@@ -32,6 +33,13 @@ export default async function LeagueDetailPage({
   const isAdmin = myMembership?.role === "admin";
   const isMember = Boolean(myMembership);
   const hasActiveOrDraftingSeason = league.seasons.some((s) => s.status === "drafting" || s.status === "active");
+  // Every member (owner or admin) gets a roster when a season starts —
+  // admin is a permission on top of participating, not a separate
+  // non-playing role. See start-season.ts.
+  const memberCount = league.memberships.length;
+
+  const h = await headers();
+  const inviteUrl = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}/leagues/${league.id}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -59,14 +67,50 @@ export default async function LeagueDetailPage({
       )}
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Owners ({league.memberships.filter((m) => m.role === "owner").length})</h2>
-        <ul className="flex flex-col gap-1 text-sm">
+        <h2 className="text-lg font-semibold mb-3">Members ({memberCount})</h2>
+        <p className="text-xs text-neutral-500 mb-3">
+          Every member gets a roster when a season starts — as the admin, you can play too, or just invite others below.
+        </p>
+        <ul className="flex flex-col gap-1 text-sm mb-4">
           {league.memberships.map((m) => (
             <li key={m.id} className="text-neutral-600 dark:text-neutral-400">
               {m.user.name ?? m.user.email} <span className="text-xs">({m.role})</span>
             </li>
           ))}
         </ul>
+
+        {isAdmin && (
+          <div className="flex flex-col gap-4 max-w-sm">
+            <div>
+              <p className="text-sm font-medium mb-1">Invite link</p>
+              <p className="text-xs text-neutral-500 mb-1">
+                Anyone signed in can join this league from this link — send it to your friends.
+              </p>
+              <input
+                readOnly
+                value={inviteUrl}
+                className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
+              />
+            </div>
+
+            <form action={inviteOwnerAction} className="flex flex-col gap-2">
+              <input type="hidden" name="leagueId" value={league.id} />
+              <label className="flex flex-col gap-1 text-sm">
+                Add an owner by email (they need an account already)
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="friend@example.com"
+                  className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+                />
+              </label>
+              <button type="submit" className="rounded-md border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium w-fit">
+                Add owner
+              </button>
+            </form>
+          </div>
+        )}
       </section>
 
       <section>

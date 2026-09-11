@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
 import { createLeague } from "@/server/domain/leagues/create-league";
-import { joinLeague } from "@/server/domain/leagues/join-league";
+import { joinLeague, inviteOwnerByEmail } from "@/server/domain/leagues/join-league";
 import { startSeason } from "@/server/domain/leagues/start-season";
 import { closeSeason } from "@/server/domain/leagues/close-season";
 import { startDraft } from "@/server/domain/drafts/start-draft";
@@ -43,6 +43,20 @@ export async function joinLeagueAction(formData: FormData) {
   const session = await requireSession();
   const leagueId = String(formData.get("leagueId") ?? "");
   await joinLeague(session.user.activeTenantId, leagueId, session.user.id);
+  redirect(`/leagues/${leagueId}`);
+}
+
+export async function inviteOwnerAction(formData: FormData) {
+  const session = await requireSession();
+  const leagueId = String(formData.get("leagueId") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+  try {
+    await inviteOwnerByEmail(session.user.activeTenantId, leagueId, email);
+  } catch (err) {
+    redirect(`/leagues/${leagueId}?error=${encodeURIComponent(errMsg(err))}`);
+  }
+
   redirect(`/leagues/${leagueId}`);
 }
 

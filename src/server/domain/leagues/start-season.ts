@@ -14,11 +14,15 @@ const startSeasonSchema = z.object({
 export type StartSeasonInput = z.input<typeof startSeasonSchema>;
 
 /**
- * Creates a Season for `leagueId` and a Roster for every current owner
- * (LeagueMembership role="owner") — rosters must exist before the draft
- * engine can attach picks to them. Reused both for a league's first season
- * and for SRD D3 ("a new season ... without losing historical standings":
- * nothing here touches prior seasons, they just stay queryable).
+ * Creates a Season for `leagueId` and a Roster for every current league
+ * member — "admin" is a permission on top of participating (SRD's League
+ * Admin persona configures the league, which doesn't preclude also
+ * drafting a roster — real commissioners usually play too), not a
+ * separate non-playing role, so every LeagueMembership row gets a roster
+ * regardless of role. Rosters must exist before the draft engine can
+ * attach picks to them. Reused both for a league's first season and for
+ * SRD D3 ("a new season ... without losing historical standings": nothing
+ * here touches prior seasons, they just stay queryable).
  *
  * Epic D1's redraft/keeper choice happens here: if the effective policy is
  * "keeper", every returning owner's Roster is pre-populated with the
@@ -38,11 +42,11 @@ export async function startSeason(tenantId: string, leagueId: string, input: Sta
   return withTenant(tenantId, async (tx) => {
     const league = await tx.league.findUniqueOrThrow({ where: { id: leagueId } });
     const owners = await tx.leagueMembership.findMany({
-      where: { leagueId, role: "owner" },
+      where: { leagueId },
       select: { userId: true },
     });
     if (owners.length === 0) {
-      throw new LeagueError("A league needs at least one owner before starting a season");
+      throw new LeagueError("A league needs at least one member before starting a season");
     }
 
     const effectivePolicy =
