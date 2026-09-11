@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { auth, signOut } from "@/server/auth";
+import { withTenant } from "@/server/db/tenant-client";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,6 +22,14 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
+  const isTenantAdmin =
+    session?.user?.id && session.user.activeTenantId
+      ? await withTenant(session.user.activeTenantId, (tx) =>
+          tx.tenantMembership
+            .findUnique({ where: { tenantId_userId: { tenantId: session.user.activeTenantId, userId: session.user.id } } })
+            .then((m) => m?.role === "admin")
+        )
+      : false;
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
@@ -35,6 +44,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <>
                   <Link href="/leagues">Leagues</Link>
                   <Link href="/account/billing">Billing</Link>
+                  {isTenantAdmin && <Link href="/admin">Admin</Link>}
                   <span className="text-neutral-500">
                     {session.user.name ?? session.user.email}
                     {session.user.entitlement?.tier === "paid" ? " · Paid" : " · Free"}
