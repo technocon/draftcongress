@@ -40,10 +40,10 @@ export async function main() {
   // valid `uuid` literals) used purely so this seed script is idempotent
   // across re-runs via upsert — they carry no other meaning.
   const congress = await db.legislativeBody.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000001" },
+    where: { id: "00000000-0000-4000-8000-000000000001" },
     update: {},
     create: {
-      id: "00000000-0000-0000-0000-000000000001",
+      id: "00000000-0000-4000-8000-000000000001",
       country: "US",
       level: "national",
       name: "United States Congress",
@@ -53,7 +53,7 @@ export async function main() {
   });
 
   const house = await upsertChamber({
-    id: "00000000-0000-0000-0000-000000000002",
+    id: "00000000-0000-4000-8000-000000000002",
     legislativeBodyId: congress.id,
     name: "U.S. House of Representatives",
     totalSeats: 435,
@@ -61,7 +61,7 @@ export async function main() {
   });
 
   const senate = await upsertChamber({
-    id: "00000000-0000-0000-0000-000000000003",
+    id: "00000000-0000-4000-8000-000000000003",
     legislativeBodyId: congress.id,
     name: "U.S. Senate",
     totalSeats: 100,
@@ -71,10 +71,10 @@ export async function main() {
   // --- Reference data: platform-default free-tier taxonomy (Epic B4, F3) ---
 
   const freeTaxonomy = await db.blocTaxonomy.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000004" },
+    where: { id: "00000000-0000-4000-8000-000000000004" },
     update: {},
     create: {
-      id: "00000000-0000-0000-0000-000000000004",
+      id: "00000000-0000-4000-8000-000000000004",
       tenantId: null,
       name: "Leadership Caucuses",
       tierRequired: "free",
@@ -82,10 +82,10 @@ export async function main() {
   });
 
   const paidTaxonomy = await db.blocTaxonomy.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000005" },
+    where: { id: "00000000-0000-4000-8000-000000000005" },
     update: {},
     create: {
-      id: "00000000-0000-0000-0000-000000000005",
+      id: "00000000-0000-4000-8000-000000000005",
       tenantId: null,
       name: "Ideological & Policy Blocs",
       tierRequired: "paid",
@@ -95,10 +95,10 @@ export async function main() {
   // --- Reference data: platform-default scoring config + PLACEHOLDER rules ---
 
   const scoringConfig = await db.scoringConfig.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000006" },
+    where: { id: "00000000-0000-4000-8000-000000000006" },
     update: {},
     create: {
-      id: "00000000-0000-0000-0000-000000000006",
+      id: "00000000-0000-4000-8000-000000000006",
       tenantId: null,
       legislativeWeight: 0.5,
       electoralWeight: 0.5,
