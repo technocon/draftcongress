@@ -34,12 +34,19 @@ function raceColor(race: RaceDetail): string {
 export function RaceArcChart({ chamberName, races }: { chamberName: string; races: RaceDetail[] }) {
   const [selected, setSelected] = useState<RaceDetail | null>(null);
 
-  const option: EChartsOption = useMemo(() => {
+  // Computed once per `races` (not per selection) so the locked aspect
+  // ratio passed to EChart below stays in sync with the axis spans set
+  // in `option` — both must derive from the same extent or the hemicycle
+  // still distorts.
+  const { maxAbsX, maxY } = useMemo(() => {
     const xs = races.map((r) => r.x);
     const ys = races.map((r) => r.y);
-    const maxAbsX = Math.max(1, ...xs.map(Math.abs));
-    const maxY = Math.max(1, ...ys);
+    return { maxAbsX: Math.max(1, ...xs.map(Math.abs)), maxY: Math.max(1, ...ys) };
+  }, [races]);
+  const xSpan = maxAbsX * 2.16;
+  const ySpan = maxY * 1.22;
 
+  const option: EChartsOption = useMemo(() => {
     return {
       tooltip: {
         trigger: "item",
@@ -68,13 +75,13 @@ export function RaceArcChart({ chamberName, races }: { chamberName: string; race
         },
       ],
     };
-  }, [races, selected]);
+  }, [races, selected, maxAbsX, maxY]);
 
   return (
     <div className="flex flex-col gap-3">
       <EChart
         option={option}
-        height={races.length > 300 ? 280 : 220}
+        aspectRatio={xSpan / ySpan}
         onEvents={{
           click: (params) => {
             const dataIndex = (params as { dataIndex: number }).dataIndex;
