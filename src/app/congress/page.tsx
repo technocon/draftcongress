@@ -1,13 +1,12 @@
 import { prisma } from "@/server/db/client";
-import { getChamberPartyBreakdown, getChamberBlocBreakdown } from "@/server/domain/charts/chamber-composition";
-import { ChamberPartyChart } from "@/components/charts/chamber-party-chart";
-import { ChamberBlocChart } from "@/components/charts/chamber-bloc-chart";
+import { getChamberRaceMap } from "@/server/domain/charts/race-map";
+import { RaceArcChart } from "@/components/charts/race-arc-chart";
 
 /**
- * Reference-data dashboard — House/Senate party and caucus/bloc
- * composition. Not tied to any league or season (this is all reference
- * data, no RLS — see prisma/schema.prisma's "Reference/content data"
- * section), so it's reachable without a league context.
+ * Reference-data dashboard — House/Senate seat-by-seat race map. Not tied
+ * to any league or season (this is all reference data, no RLS — see
+ * prisma/schema.prisma's "Reference/content data" section), so it's
+ * reachable without a league context.
  */
 export default async function CongressPage() {
   const chambers = await prisma.chamber.findMany({ orderBy: { name: "asc" } });
@@ -15,8 +14,7 @@ export default async function CongressPage() {
   const chamberData = await Promise.all(
     chambers.map(async (chamber) => ({
       chamber,
-      party: await getChamberPartyBreakdown(chamber.id),
-      blocs: await getChamberBlocBreakdown(chamber.id),
+      races: await getChamberRaceMap(chamber.id),
     }))
   );
 
@@ -27,22 +25,18 @@ export default async function CongressPage() {
           Congress
         </h1>
         <p className="text-sm text-[var(--color-ink-soft)] mt-1">
-          Party and caucus composition of the seeded reference data — not real current membership, see prisma/seed.ts.
+          One dot per seat, colored by incumbent party and shaded by how competitive the race is — click a seat for
+          what we have on it. Illustrative seeded data, not a real race-ratings feed — see prisma/seed.ts.
         </p>
       </div>
 
-      {chamberData.map(({ chamber, party, blocs }) => (
+      {chamberData.map(({ chamber, races }) => (
         <section key={chamber.id} className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold border-b-2 border-[var(--color-accent)] pb-2">
             {chamber.name} <span className="text-sm text-[var(--color-ink-soft)] font-normal">({chamber.totalSeats} seats)</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rc-card p-2">
-              <ChamberPartyChart title="Party composition" data={party} />
-            </div>
-            <div className="rc-card p-2">
-              <ChamberBlocChart title="Caucus / bloc membership" data={blocs} />
-            </div>
+          <div className="rc-card p-4">
+            <RaceArcChart chamberName={chamber.name} races={races} />
           </div>
         </section>
       ))}

@@ -178,6 +178,7 @@ model Chamber {
   legislativeBody LegislativeBody @relation(fields: [legislativeBodyId], references: [id], onDelete: Cascade)
   blocs           Bloc[]
   legislators     Legislator[]
+  races           Race[]
 
   @@map("chambers")
 }
@@ -204,12 +205,48 @@ model Legislator {
   termStart  DateTime?        @map("term_start")
   termEnd    DateTime?        @map("term_end")
 
-  chamber         Chamber          @relation(fields: [chamberId], references: [id], onDelete: Cascade)
-  blocMemberships BlocMembership[]
-  scoringEvents   ScoringEvent[]
+  chamber          Chamber          @relation(fields: [chamberId], references: [id], onDelete: Cascade)
+  blocMemberships  BlocMembership[]
+  scoringEvents    ScoringEvent[]
+  racesAsIncumbent Race[]
 
   @@index([chamberId])
   @@map("legislators")
+}
+
+// ---------------------------------------------------------------------------
+// Reference data: Race (one per seat per election cycle — the House/Senate
+// "arc chart" the /congress dashboard renders). Deliberately separate from
+// Legislator: a Race represents a contest for a seat (incumbent party,
+// competitiveness rating), not the officeholder record itself, and every
+// seat in a chamber gets one even where we haven't seeded a full
+// Legislator record for it. rating/party values are illustrative
+// PLACEHOLDER data (see prisma/seed.ts) — there's no real race-ratings or
+// results-feed data source wired up (not in SRD §10's source list).
+// ---------------------------------------------------------------------------
+
+enum RaceRating {
+  safe
+  likely
+  lean
+  toss_up
+}
+
+model Race {
+  id                    String     @id @default(uuid()) @db.Uuid
+  chamberId             String     @map("chamber_id") @db.Uuid
+  seatLabel             String     @map("seat_label") // e.g. "District 12", "Senate Seat 4" — illustrative, not a real district
+  cycle                 String
+  party                 String // incumbent/leaning party — "D" | "R" | "I"
+  rating                RaceRating @default(safe)
+  incumbentLegislatorId String?    @map("incumbent_legislator_id") @db.Uuid
+
+  chamber   Chamber     @relation(fields: [chamberId], references: [id], onDelete: Cascade)
+  incumbent Legislator? @relation(fields: [incumbentLegislatorId], references: [id], onDelete: SetNull)
+
+  @@unique([chamberId, seatLabel, cycle])
+  @@index([chamberId, cycle])
+  @@map("races")
 }
 
 // ---------------------------------------------------------------------------

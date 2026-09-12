@@ -196,6 +196,8 @@ export async function main() {
     { key: "leg-6", bioguideId: "S000006", fullName: "Rep. F. Sample (Progressive Caucus seat)", chamber: house, party: "D", state: "WA", bloc: "progressive" },
   ];
 
+  const legislatorRecordByKey = new Map<string, { id: string; party: string; chamberId: string }>();
+
   for (const l of legislators) {
     const legislator = await db.legislator.upsert({
       where: { id: deterministicId("leg", l.key) },
@@ -210,6 +212,7 @@ export async function main() {
         status: "active",
       },
     });
+    legislatorRecordByKey.set(l.key, { id: legislator.id, party: l.party, chamberId: l.chamber.id });
 
     const bloc = blocByKey.get(l.bloc)!;
     const membershipId = deterministicId("blocmem", `${l.key}-${l.bloc}`);
@@ -230,7 +233,29 @@ export async function main() {
     }
   }
 
-  console.log(`Seeded public tenant (${tenant.slug}), ${freeBlocs.length + paidBlocs.length} blocs, ${legislators.length} legislators.`);
+  // --- Reference data: one Race per seat, both chambers (the /congress
+  // arc-chart's data source). Illustrative PLACEHOLDER party/rating
+  // values — see the model comment in schema.prisma. Deterministic via a
+  // fixed-seed PRNG so re-running this script doesn't reshuffle ratings.
+  const raceCount = await seedRaces({
+    house,
+    senate,
+    incumbents: [
+      { key: "leg-1", seatNum: 1 },
+      { key: "leg-2", seatNum: 2 },
+      { key: "leg-3", seatNum: 3 },
+      { key: "leg-6", seatNum: 4 },
+    ],
+    senateIncumbents: [
+      { key: "leg-4", seatNum: 1 },
+      { key: "leg-5", seatNum: 2 },
+    ],
+    legislatorRecordByKey,
+  });
+
+  console.log(
+    `Seeded public tenant (${tenant.slug}), ${freeBlocs.length + paidBlocs.length} blocs, ${legislators.length} legislators, ${raceCount} races.`
+  );
 }
 
 async function upsertChamber(input: {
@@ -260,6 +285,94 @@ async function upsertBloc(input: {
     update: {},
     create: input,
   });
+}
+
+/** Deterministic PRNG (mulberry32) — fixed seed so re-running the seed script produces identical race data. */
+function mulberry32(seed: number): () => number {
+  let s = seed | 0;
+  return function () {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+type RaceRatingValue = "safe" | "likely" | "lean" | "toss_up";
+
+/**
+ * One Race row per seat in each chamber — illustrative PLACEHOLDER party
+ * splits and competitiveness ratings (see the Race model comment in
+ * schema.prisma), roughly shaped like real aggregate chamber composition
+ * but not sourced from any real race-ratings feed. A handful of seats are
+ * pinned to our already-seeded illustrative Legislators so those have a
+ * full incumbent record to drill into; the rest get incumbentLegislatorId
+ * = null.
+ */
+async function seedRaces(input: {
+  house: { id: string };
+  senate: { id: string };
+  incumbents: Array<{ key: string; seatNum: number }>;
+  senateIncumbents: Array<{ key: string; seatNum: number }>;
+  legislatorRecordByKey: Map<string, { id: string; party: string; chamberId: string }>;
+}): Promise<number> {
+  const { house, senate, incumbents, senateIncumbents, legislatorRecordByKey } = input;
+  const cycle = "2026";
+  const rng = mulberry32(20260912);
+
+  // Weighted rating pool: most seats aren't competitive.
+  const ratingPool: RaceRatingValue[] = [
+    ...Array(70).fill("safe"),
+    ...Array(15).fill("likely"),
+    ...Array(10).fill("lean"),
+    ...Array(5).fill("toss_up"),
+  ] as RaceRatingValue[];
+  const pickRating = () => ratingPool[Math.floor(rng() * ratingPool.length)];
+
+  function shuffledParties(totalSeats: number, rCount: number): string[] {
+    const parties = [...Array(rCount).fill("R"), ...Array(totalSeats - rCount).fill("D")];
+    for (let i = parties.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [parties[i], parties[j]] = [parties[j], parties[i]];
+    }
+    return parties;
+  }
+
+  async function seedChamberRaces(
+    chamber: { id: string },
+    totalSeats: number,
+    rCount: number,
+    seatLabelPrefix: string,
+    pinnedIncumbents: Array<{ key: string; seatNum: number }>
+  ) {
+    const parties = shuffledParties(totalSeats, rCount);
+    const pinnedBySeat = new Map(pinnedIncumbents.map((p) => [p.seatNum, p.key]));
+
+    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) {
+      const pinnedKey = pinnedBySeat.get(seatNum);
+      const pinned = pinnedKey ? legislatorRecordByKey.get(pinnedKey) : undefined;
+      const seatLabel = `${seatLabelPrefix} ${seatNum}`;
+
+      await db.race.upsert({
+        where: { chamberId_seatLabel_cycle: { chamberId: chamber.id, seatLabel, cycle } },
+        update: {},
+        create: {
+          chamberId: chamber.id,
+          seatLabel,
+          cycle,
+          party: pinned?.party ?? parties[seatNum - 1],
+          rating: pinned ? "safe" : pickRating(),
+          incumbentLegislatorId: pinned?.id ?? null,
+        },
+      });
+    }
+  }
+
+  // Roughly today's real aggregate splits — illustrative, not live data.
+  await seedChamberRaces(house, 435, 219, "District", incumbents);
+  await seedChamberRaces(senate, 100, 52, "Senate Seat", senateIncumbents);
+
+  return 435 + 100;
 }
 
 /** Deterministic, re-run-safe UUID-shaped id for dev seed rows only. */

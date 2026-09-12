@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as echarts from "echarts/core";
-import { PieChart, BarChart, LineChart } from "echarts/charts";
+import { PieChart, BarChart, LineChart, ScatterChart } from "echarts/charts";
 import {
   TitleComponent,
   TooltipComponent,
@@ -17,6 +17,7 @@ echarts.use([
   PieChart,
   BarChart,
   LineChart,
+  ScatterChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
@@ -32,7 +33,18 @@ echarts.use([
  * types actually used across the app (see `echarts.use([...])` above)
  * rather than importing all of echarts, to keep the client bundle small.
  */
-export function EChart({ option, height = 320, className }: { option: EChartsOption; height?: number; className?: string }) {
+export function EChart({
+  option,
+  height = 320,
+  className,
+  onEvents,
+}: {
+  option: EChartsOption;
+  height?: number;
+  className?: string;
+  /** Maps an ECharts event name (e.g. "click") to a handler — bound/rebound whenever the handler identity changes. */
+  onEvents?: Record<string, (params: unknown) => void>;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
@@ -54,6 +66,19 @@ export function EChart({ option, height = 320, className }: { option: EChartsOpt
   useEffect(() => {
     chartRef.current?.setOption(option, true);
   }, [option]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !onEvents) return;
+    for (const [event, handler] of Object.entries(onEvents)) {
+      chart.on(event, handler);
+    }
+    return () => {
+      for (const event of Object.keys(onEvents)) {
+        chart.off(event);
+      }
+    };
+  }, [onEvents]);
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height }} />;
 }
