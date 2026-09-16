@@ -22,6 +22,8 @@ export async function createLeagueAction(formData: FormData) {
     redraftPolicyRaw === "keeper" || redraftPolicyRaw === "admin_choice_per_cycle" || redraftPolicyRaw === "full_redraft"
       ? redraftPolicyRaw
       : undefined;
+  const homeStateRaw = String(formData.get("homeState") ?? "");
+  const homeState = homeStateRaw || undefined;
 
   let leagueId: string;
   try {
@@ -30,6 +32,7 @@ export async function createLeagueAction(formData: FormData) {
       rosterSize,
       isPrivate,
       redraftPolicy,
+      homeState,
     });
     leagueId = league.id;
   } catch (err) {

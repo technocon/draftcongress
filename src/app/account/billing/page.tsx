@@ -15,9 +15,7 @@ export default async function BillingPage({
 
   return (
     <div className="max-w-lg flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
-        Billing
-      </h1>
+      <h1 className="text-2xl font-black">Billing</h1>
 
       {checkout === "success" && (
         <p className="rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-900 px-3 py-2 text-sm text-green-700 dark:text-green-300">
@@ -47,7 +45,7 @@ export default async function BillingPage({
         </form>
       ) : (
         <form action={startCheckoutAction}>
-          <button type="submit" className="btn-primary">
+          <button type="submit" className="btn-premium">
             Upgrade to paid tier
           </button>
         </form>

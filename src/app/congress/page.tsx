@@ -21,9 +21,7 @@ export default async function CongressPage() {
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
-          Congress
-        </h1>
+        <h1 className="text-2xl font-black">Congress</h1>
         <p className="text-sm text-[var(--color-ink-soft)] mt-1">
           One dot per seat, colored by incumbent party and shaded by how competitive the race is — click a seat for
           what we have on it. Illustrative seeded data, not a real race-ratings feed — see prisma/seed.ts.

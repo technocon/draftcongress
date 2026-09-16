@@ -8,6 +8,7 @@ import { submitDraftPickAction } from "@/server/actions/drafts";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { computeBlocLeaderboard } from "@/server/domain/charts/bloc-leaderboard";
 import { BlocLeaderboardChart } from "@/components/charts/bloc-leaderboard-chart";
+import { StateFlag } from "@/components/state-flag";
 
 export default async function DraftBoardPage({
   params,
@@ -64,7 +65,8 @@ export default async function DraftBoardPage({
             ← {draftEvent.season.league.name}
           </Link>
         )}
-        <h1 className="text-2xl font-semibold mt-1" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+        <h1 className="text-2xl font-semibold mt-1 flex items-center gap-2">
+          <StateFlag code={draftEvent.season.league.homeState} size={28} />
           Draft <span className="text-sm text-[var(--color-ink-soft)] font-normal">({draftEvent.status})</span>
         </h1>
         {draftEvent.status === "in_progress" && (
@@ -92,12 +94,11 @@ export default async function DraftBoardPage({
                 const eligible = !bloc.isPaidTier || entitlement.tier === "paid";
                 return (
                   <li key={bloc.id} className="rc-card flex items-center justify-between px-4 py-3">
-                    <div>
+                    <div className="flex items-center gap-2">
                       <span className="headline-link">{bloc.name}</span>
-                      <span className="ml-2 text-xs text-[var(--color-ink-soft)]">
-                        {bloc.chamber.name} · {bloc.blocType}
-                        {bloc.isPaidTier ? " · Paid tier" : ""}
-                      </span>
+                      <span className="badge-pill">{bloc.blocType}</span>
+                      <span className="text-xs text-[var(--color-ink-soft)]">{bloc.chamber.name}</span>
+                      {bloc.isPaidTier && <span className="badge-pill bg-[var(--color-premium)]! text-white!">Paid</span>}
                     </div>
                     {isMyTurn && eligible && (
                       <form action={submitDraftPickAction}>
@@ -130,19 +131,20 @@ export default async function DraftBoardPage({
 
       <section>
         <h2 className="text-lg font-semibold mb-3 section-label">Pick order</h2>
-        <ol className="flex flex-wrap gap-2 text-sm">
-          {pickOrder.map((userId, i) => (
-            <li
-              key={i}
-              className={`rounded-md border px-2 py-1 ${
-                draftEvent.currentPickerUserId === userId
-                  ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold"
-                  : "border-[var(--color-rule)] text-[var(--color-ink-soft)]"
-              }`}
-            >
-              {i + 1}. {userId === session.user.id ? "You" : userId.slice(0, 8)}
-            </li>
-          ))}
+        <ol className="flex gap-2 text-sm overflow-x-auto pb-1">
+          {pickOrder.map((userId, i) => {
+            const onTheClock = draftEvent.currentPickerUserId === userId;
+            return (
+              <li
+                key={i}
+                className={`rc-card flex-shrink-0 px-3 py-2 text-center min-w-[84px] ${onTheClock ? "border-[var(--color-primary)] border-2" : ""}`}
+              >
+                <div className="text-xs text-[var(--color-ink-soft)] font-semibold">{i + 1}</div>
+                <div className="font-bold">{userId === session.user.id ? "You" : userId.slice(0, 8)}</div>
+                {onTheClock && <div className="badge-pill mt-1">ON THE CLOCK</div>}
+              </li>
+            );
+          })}
         </ol>
       </section>
 

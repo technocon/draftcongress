@@ -13,9 +13,7 @@ export default async function LoginPage({
 
   return (
     <div className="max-w-sm mx-auto flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
-        Sign in
-      </h1>
+      <h1 className="text-2xl font-black">Sign in</h1>
 
       {error && (
         <p className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-700 dark:text-red-300">

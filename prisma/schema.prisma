@@ -413,6 +413,12 @@ model League {
   // Not in the SRD's literal schema — needed to know how many draft rounds
   // run and to validate league size against available blocs (open question #5).
   rosterSize      Int           @default(8) @map("roster_size")
+  // Cosmetic identity, chosen at league creation (see src/lib/us-states.ts)
+  // — a 2-letter USPS state code, rendered as a flag icon wherever the
+  // league is referenced. Nullable because leagues created before this
+  // field existed have none; the create-league form makes it required
+  // for new leagues.
+  homeState       String?       @map("home_state")
   createdAt       DateTime      @default(now()) @map("created_at")
 
   tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)

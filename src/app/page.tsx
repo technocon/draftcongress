@@ -8,9 +8,7 @@ export default async function Home() {
   return (
     <div className="flex flex-col gap-8">
       <section>
-        <h1 className="text-3xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
-          Fantasy sports mechanics, applied to Congress.
-        </h1>
+        <h1 className="text-3xl font-black">Fantasy sports mechanics, applied to Congress.</h1>
         <p className="mt-3 text-[var(--color-ink-soft)] max-w-2xl">
           Draft legislative blocs onto a season-long roster, then score continuously against real bill activity,
           votes, and electoral outcomes — no cash stakes, ever.

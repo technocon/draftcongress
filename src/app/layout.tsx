@@ -1,24 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono, Lora } from "next/font/google";
+import { Geist_Mono, Roboto } from "next/font/google";
 import "./globals.css";
 import { auth, signOut } from "@/server/auth";
 import { withTenant } from "@/server/db/tenant-client";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const roboto = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-const headlineSerif = Lora({
-  variable: "--font-headline",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -37,33 +32,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         )
       : false;
 
-  const navLinkClass = "text-white/85 hover:text-white transition-colors";
+  const navLinkClass = "text-white/80 hover:text-white transition-colors";
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${headlineSerif.variable} h-full antialiased`}>
+    <html lang="en" className={`${roboto.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[var(--color-paper)] text-[var(--color-ink)]">
-        <header>
-          {/* Masthead: wordmark treatment echoes RCP's "RealClear" + red
-              "Politics" block two-tone logo, without copying it directly. */}
-          <div className="border-b border-[var(--color-rule)]">
-            <div className="mx-auto max-w-5xl flex items-center justify-between px-4 py-3">
-              <Link href="/" className="flex items-center text-2xl leading-none" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
-                <span className="font-semibold text-[var(--color-ink)]">Draft</span>
-                <span className="ml-1 bg-[var(--color-accent)] text-white px-2 py-0.5">Congress</span>
+        {/* Single navy bar — wordmark, nav links, and account/CTA all in
+            one row, mirroring nflmockdraftdatabase.com's draft-room header
+            rather than the old two-tier RCP masthead. */}
+        <header className="bg-[var(--color-navy)]">
+          <div className="mx-auto max-w-5xl flex items-center justify-between px-4 py-3 text-sm">
+            <div className="flex items-center gap-6">
+              <Link href="/" className="flex items-center gap-1.5 text-lg font-black text-white leading-none">
+                <span className="inline-block w-1 h-5 bg-[var(--color-primary)] rounded-full" aria-hidden />
+                Draft<span className="text-[var(--color-primary)]">Congress</span>
               </Link>
-              {session?.user && (
-                <span className="text-xs text-[var(--color-ink-soft)]">
-                  {session.user.name ?? session.user.email}
-                  {session.user.entitlement?.tier === "paid" ? " · Paid" : " · Free"}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Nav bar: near-black bar with white links, matching RCP's own nav. */}
-          <nav className="bg-[var(--color-navy)]">
-            <div className="mx-auto max-w-5xl flex items-center justify-between px-4 py-2.5 text-sm">
-              <div className="flex items-center gap-5">
+              <nav className="hidden sm:flex items-center gap-5">
                 <Link href="/congress" className={navLinkClass}>
                   Congress
                 </Link>
@@ -82,9 +66,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     )}
                   </>
                 )}
-              </div>
-              <div className="flex items-center gap-4">
-                {session?.user ? (
+              </nav>
+            </div>
+            <div className="flex items-center gap-4">
+              {session?.user ? (
+                <>
+                  <span className="hidden sm:inline text-white/60 text-xs">
+                    {session.user.name ?? session.user.email}
+                    {session.user.entitlement?.tier === "paid" ? " · Paid" : " · Free"}
+                  </span>
                   <form
                     action={async () => {
                       "use server";
@@ -95,19 +85,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                       Sign out
                     </button>
                   </form>
-                ) : (
-                  <>
-                    <Link href="/login" className={navLinkClass}>
-                      Sign in
-                    </Link>
-                    <Link href="/register" className="rounded bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-white px-3 py-1 font-medium transition-colors">
-                      Create account
-                    </Link>
-                  </>
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className={navLinkClass}>
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="rounded-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white px-4 py-1.5 font-semibold transition-colors"
+                  >
+                    Create account
+                  </Link>
+                </>
+              )}
             </div>
-          </nav>
+          </div>
         </header>
         <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-8">{children}</main>
       </body>

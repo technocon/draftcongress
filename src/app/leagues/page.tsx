@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { withTenant } from "@/server/db/tenant-client";
 import { createLeagueAction, joinLeagueAction } from "@/server/actions/leagues";
+import { StateFlag } from "@/components/state-flag";
+import { StateFlagPicker } from "@/components/state-flag-picker";
 
 export default async function LeaguesPage({
   searchParams,
@@ -43,11 +45,12 @@ export default async function LeaguesPage({
         ) : (
           <ul className="flex flex-col gap-2">
             {myLeagues.map((m) => (
-              <li key={m.leagueId} className="rc-card px-4 py-3 hover:bg-[var(--color-paper-muted)]">
+              <li key={m.leagueId} className="rc-card flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-paper-muted)]">
+                <StateFlag code={m.league.homeState} size={28} />
                 <Link href={`/leagues/${m.leagueId}`} className="headline-link text-lg">
                   {m.league.name}
                 </Link>
-                <span className="ml-2 text-xs text-[var(--color-ink-soft)]">{m.role}</span>
+                <span className="text-xs text-[var(--color-ink-soft)]">{m.role}</span>
               </li>
             ))}
           </ul>
@@ -62,6 +65,10 @@ export default async function LeaguesPage({
             League name
             <input name="name" required className="rc-input" />
           </label>
+          <div className="flex flex-col gap-1 text-sm">
+            Home state
+            <StateFlagPicker />
+          </div>
           <label className="flex flex-col gap-1 text-sm">
             Roster size
             <input name="rosterSize" type="number" defaultValue={8} min={1} max={50} className="rc-input" />
@@ -89,11 +96,12 @@ export default async function LeaguesPage({
           <h2 className="text-lg font-semibold mb-3 section-label">Public leagues</h2>
           <ul className="flex flex-col gap-2">
             {browsableLeagues.map((league) => (
-              <li key={league.id} className="rc-card flex items-center justify-between px-4 py-3">
-                <span className="headline-link">{league.name}</span>
+              <li key={league.id} className="rc-card flex items-center gap-3 px-4 py-3">
+                <StateFlag code={league.homeState} size={28} />
+                <span className="headline-link flex-1">{league.name}</span>
                 <form action={joinLeagueAction}>
                   <input type="hidden" name="leagueId" value={league.id} />
-                  <button type="submit" className="text-sm text-[var(--color-accent)] hover:text-[var(--color-accent-dark)] underline">
+                  <button type="submit" className="text-sm text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] underline">
                     Join
                   </button>
                 </form>

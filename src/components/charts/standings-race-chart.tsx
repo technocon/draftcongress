@@ -4,7 +4,7 @@ import type { EChartsOption } from "echarts";
 import { EChart } from "./echart";
 import type { RaceSeries } from "@/server/domain/charts/standings-race";
 
-const SERIES_COLORS = ["#9e1b1b", "#2563eb", "#16a34a", "#d97706", "#7c3aed", "#0ea5e9", "#db2777", "#65a30d"];
+const SERIES_COLORS = ["#005bbe", "#e5853c", "#16a34a", "#dc2626", "#7c3aed", "#0ea5e9", "#db2777", "#65a30d"];
 
 export function StandingsRaceChart({ series }: { series: RaceSeries[] }) {
   const hasAnyPoints = series.some((s) => s.points.length > 0);

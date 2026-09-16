@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { requireSession } from "@/lib/session";
 import { withTenant } from "@/server/db/tenant-client";
 import { joinLeagueAction, startSeasonAction, inviteOwnerAction } from "@/server/actions/leagues";
+import { StateFlag } from "@/components/state-flag";
 
 export default async function LeagueDetailPage({
   params,
@@ -49,14 +50,15 @@ export default async function LeagueDetailPage({
         </p>
       )}
 
-      <div>
-        <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
-          {league.name}
-        </h1>
-        <p className="text-sm text-[var(--color-ink-soft)] mt-1">
-          {league.draftFormat} draft · {league.rosterSize}-bloc rosters · {league.blocTaxonomy.name} ·{" "}
-          {league.isPrivate ? "Private" : "Public"} · {league.redraftPolicy.replace(/_/g, " ")}
-        </p>
+      <div className="flex items-center gap-3">
+        <StateFlag code={league.homeState} size={40} />
+        <div>
+          <h1 className="text-2xl font-semibold">{league.name}</h1>
+          <p className="text-sm text-[var(--color-ink-soft)] mt-1">
+            {league.draftFormat} draft · {league.rosterSize}-bloc rosters · {league.blocTaxonomy.name} ·{" "}
+            {league.isPrivate ? "Private" : "Public"} · {league.redraftPolicy.replace(/_/g, " ")}
+          </p>
+        </div>
       </div>
 
       {!isMember && (

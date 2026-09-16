@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "./echart";
 import type { RaceDetail } from "@/server/domain/charts/race-map";
+import { StateFlag } from "@/components/state-flag";
 
 const PARTY_BASE: Record<string, string> = { D: "#2563eb", R: "#dc2626", I: "#7c3aed" };
 const RATING_FACTOR: Record<string, number> = { safe: 1, likely: 0.75, lean: 0.55, toss_up: 0.35 };
@@ -118,7 +119,8 @@ export function RaceArcChart({ chamberName, races }: { chamberName: string; race
           {selected.incumbent ? (
             <div className="mt-3 flex flex-col gap-2">
               <p className="headline-link text-base">{selected.incumbent.fullName}</p>
-              <p className="text-[var(--color-ink-soft)]">
+              <p className="text-[var(--color-ink-soft)] flex items-center gap-1.5">
+                <StateFlag code={selected.incumbent.state} size={18} />
                 {selected.incumbent.state}
                 {selected.incumbent.district ? ` · District ${selected.incumbent.district}` : ""}
               </p>

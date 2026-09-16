@@ -1,22 +1,31 @@
 @import "tailwindcss";
 
 /*
- * Palette modeled on realclearpolitics.com's current look (checked via a
- * Wayback Machine snapshot — the live site 403s automated browsers):
- * dense white/off-white paper background, a near-black masthead/nav bar,
- * brick-red headline links and accents, bold black section labels, and
- * thin warm-gray rules between sections. Serif headlines over a plain
- * sans body/UI — see layout.tsx's font setup.
+ * Palette modeled on nflmockdraftdatabase.com's mock draft simulator
+ * (colors pulled from its live computed styles): a light-gray page
+ * background with white cards, a dark navy header/nav bar, a blue
+ * primary action color, light-blue pill badges, and an orange accent
+ * reserved for paid-tier upsells — mirroring that site's "Mock+ Gold"
+ * treatment. One sans font throughout (Roboto — see layout.tsx), no
+ * serif/sans mixing.
  */
 :root {
-  --color-paper: #ffffff;
-  --color-paper-muted: #f7f5f1;
-  --color-ink: #1a1a1a;
-  --color-ink-soft: #55524c;
-  --color-accent: #9e1b1b;
-  --color-accent-dark: #7a1414;
-  --color-navy: #14161a;
-  --color-rule: #e4e0d8;
+  --color-paper: #f1f2f4; /* page background */
+  --color-card: #ffffff; /* card/surface background */
+  --color-paper-muted: #f3f4f6; /* subtle fill (alternating rows, muted panels) */
+  --color-ink: #111827;
+  --color-ink-soft: #6b7280;
+  --color-primary: #005bbe;
+  --color-primary-dark: #004490;
+  --color-accent: #005bbe; /* kept as an alias of --color-primary so any remaining inline usage stays correct */
+  --color-accent-dark: #004490;
+  --color-premium: #e5853c;
+  --color-premium-dark: #cf6f27;
+  --color-navy: #233947;
+  --color-navy-dark: #1a2b36;
+  --color-rule: #e5e7eb;
+  --color-badge-bg: #e7f6fd;
+  --color-badge-text: #004fa3;
 
   --background: var(--color-paper);
   --foreground: var(--color-ink);
@@ -26,28 +35,39 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-paper: var(--color-paper);
+  --color-card: var(--color-card);
   --color-paper-muted: var(--color-paper-muted);
   --color-ink: var(--color-ink);
   --color-ink-soft: var(--color-ink-soft);
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
   --color-accent: var(--color-accent);
   --color-accent-dark: var(--color-accent-dark);
+  --color-premium: var(--color-premium);
   --color-navy: var(--color-navy);
   --color-rule: var(--color-rule);
-  --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-headline);
+  --font-sans: var(--font-roboto);
+  --font-serif: var(--font-roboto);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-paper: #121212;
-    --color-paper-muted: #1a1a1a;
-    --color-ink: #ededea;
-    --color-ink-soft: #a8a49c;
-    --color-accent: #c23b3b;
-    --color-accent-dark: #e05555;
-    --color-navy: #0a0b0d;
-    --color-rule: #2c2a26;
+    --color-paper: #14181c;
+    --color-card: #1c2126;
+    --color-paper-muted: #20262b;
+    --color-ink: #f0f1f3;
+    --color-ink-soft: #9aa2ac;
+    --color-primary: #3b9eff;
+    --color-primary-dark: #6db4ff;
+    --color-accent: #3b9eff;
+    --color-accent-dark: #6db4ff;
+    --color-premium: #f0994f;
+    --color-navy: #10181e;
+    --color-navy-dark: #0a1116;
+    --color-rule: #2b3238;
+    --color-badge-bg: #12314a;
+    --color-badge-text: #7dc4ff;
 
     --background: var(--color-paper);
     --foreground: var(--color-ink);
@@ -61,42 +81,55 @@ body {
 }
 
 @layer components {
-  /* RCP-style headline link: bold serif, brick red, tightens on hover. */
+  /* Bold entity-name text (league/bloc names in a list) — plain ink,
+     blue only on hover, matching the reference site's plain-black player
+     names rather than the old RCP-styled colored serif link. */
   .headline-link {
-    font-family: var(--font-serif), Georgia, serif;
     font-weight: 700;
-    color: var(--color-accent);
+    color: var(--color-ink);
     text-decoration: none;
   }
   .headline-link:hover {
-    color: var(--color-accent-dark);
-    text-decoration: underline;
+    color: var(--color-primary);
   }
 
-  /* Small bold black label used for section/category headers. */
   .section-label {
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
     color: var(--color-ink);
   }
 
   .btn-primary {
-    background: var(--color-accent);
+    background: var(--color-primary);
     color: #ffffff;
-    border-radius: 0.25rem;
+    border-radius: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
     font-weight: 600;
   }
   .btn-primary:hover {
-    background: var(--color-accent-dark);
+    background: var(--color-primary-dark);
+  }
+
+  /* Reserved for paid-tier / upsell CTAs — the reference site's "Unlock
+     with Mock+ Gold" orange treatment. */
+  .btn-premium {
+    background: var(--color-premium);
+    color: #ffffff;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .btn-premium:hover {
+    background: var(--color-premium-dark);
   }
 
   .btn-secondary {
-    background: transparent;
+    background: var(--color-card);
     color: var(--color-ink);
     border: 1px solid var(--color-rule);
-    border-radius: 0.25rem;
+    border-radius: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -106,9 +139,9 @@ body {
   }
 
   .rc-card {
-    background: var(--color-paper);
+    background: var(--color-card);
     border: 1px solid var(--color-rule);
-    border-radius: 0.25rem;
+    border-radius: 0.75rem;
   }
 
   .rc-rule {
@@ -116,14 +149,51 @@ body {
   }
 
   .rc-input {
-    background: var(--color-paper);
+    background: var(--color-card);
     color: var(--color-ink);
     border: 1px solid var(--color-rule);
-    border-radius: 0.25rem;
+    border-radius: 0.5rem;
     padding: 0.5rem 0.75rem;
   }
   .rc-input:focus {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-primary);
     outline-offset: -1px;
+  }
+
+  /* Small light-blue pill — the reference site's position badge (e.g.
+     "QB"), reused here for tier/status/role labels. */
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-badge-bg);
+    color: var(--color-badge-text);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    line-height: 1.4;
+  }
+
+  /* iOS-style segmented control, e.g. the draft board's pick-order strip. */
+  .tab-group {
+    display: flex;
+    background: var(--color-paper-muted);
+    border-radius: 0.5rem;
+    padding: 0.125rem;
+    gap: 0.125rem;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.375rem 0;
+    border-radius: 0.375rem;
+    color: var(--color-ink-soft);
+  }
+  .tab-active {
+    background: var(--color-card);
+    color: var(--color-ink);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 }

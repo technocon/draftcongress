@@ -2,6 +2,9 @@ import { z } from "zod";
 import { withTenant } from "@/server/db/tenant-client";
 import { prisma } from "@/server/db/client";
 import { writeAuditLog } from "@/server/domain/audit/log";
+import { US_STATES } from "@/lib/us-states";
+
+const STATE_CODES = US_STATES.map((s) => s.code) as [string, ...string[]];
 
 const createLeagueSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -9,6 +12,8 @@ const createLeagueSchema = z.object({
   redraftPolicy: z.enum(["full_redraft", "keeper", "admin_choice_per_cycle"]).default("full_redraft"),
   isPrivate: z.boolean().default(true),
   rosterSize: z.number().int().min(1).max(50).default(8),
+  /** The league's cosmetic flag identity — see League.homeState in schema.prisma. */
+  homeState: z.enum(STATE_CODES).optional(),
   /** Defaults to the platform-default free taxonomy/scoring config if omitted — SRD A2's "sensible defaults, under 2 minutes." */
   blocTaxonomyId: z.string().uuid().optional(),
   scoringConfigId: z.string().uuid().optional(),
@@ -43,6 +48,7 @@ export async function createLeague(tenantId: string, adminUserId: string, input:
         redraftPolicy: parsed.redraftPolicy,
         isPrivate: parsed.isPrivate,
         rosterSize: parsed.rosterSize,
+        homeState: parsed.homeState,
         blocTaxonomyId: parsed.blocTaxonomyId ?? defaultTaxonomy!.id,
         scoringConfigId: parsed.scoringConfigId ?? defaultScoringConfig!.id,
         memberships: {

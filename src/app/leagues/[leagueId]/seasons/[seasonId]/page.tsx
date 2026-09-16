@@ -8,6 +8,7 @@ import { computeBlocLeaderboard } from "@/server/domain/charts/bloc-leaderboard"
 import { startDraftAction, closeSeasonAction } from "@/server/actions/leagues";
 import { StandingsRaceChart } from "@/components/charts/standings-race-chart";
 import { BlocLeaderboardChart } from "@/components/charts/bloc-leaderboard-chart";
+import { StateFlag } from "@/components/state-flag";
 
 export default async function SeasonDetailPage({
   params,
@@ -64,7 +65,8 @@ export default async function SeasonDetailPage({
         <Link href={`/leagues/${leagueId}`} className="text-sm underline text-[var(--color-ink-soft)]">
           ← {season.league.name}
         </Link>
-        <h1 className="text-2xl font-semibold mt-1" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+        <h1 className="text-2xl font-semibold mt-1 flex items-center gap-2">
+          <StateFlag code={season.league.homeState} size={28} />
           {season.electionCycle} season <span className="text-sm text-[var(--color-ink-soft)] font-normal">({season.status})</span>
         </h1>
       </div>
