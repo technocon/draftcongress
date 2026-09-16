@@ -30,7 +30,7 @@ export default async function CongressStatePage({ params }: { params: Promise<{ 
       </div>
 
       <div className="rc-card p-4">
-        <StateDelegationView delegation={delegation} />
+        <StateDelegationView stateCode={stateCode} delegation={delegation} />
       </div>
     </div>
   );
