@@ -1,0 +1,8 @@
+[
+  { "bioguideId": "S000001", "fullName": "A. Sample", "party": "R", "state": "TX", "chamber": "house", "district": 1 },
+  { "bioguideId": "S000002", "fullName": "B. Sample", "party": "D", "state": "CA", "chamber": "house", "district": 1 },
+  { "bioguideId": "S000003", "fullName": "C. Sample", "party": "R", "state": "OH", "chamber": "house", "district": 1 },
+  { "bioguideId": "S000006", "fullName": "F. Sample", "party": "D", "state": "WA", "chamber": "house", "district": 1 },
+  { "bioguideId": "S000004", "fullName": "D. Sample", "party": "D", "state": "NY", "chamber": "senate", "district": null },
+  { "bioguideId": "S000005", "fullName": "E. Sample", "party": "R", "state": "TX", "chamber": "senate", "district": null }
+]

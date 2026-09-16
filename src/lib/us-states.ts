@@ -58,8 +58,18 @@ export const US_STATES: Array<{ code: string; name: string }> = [
 ];
 
 const BY_CODE = new Map(US_STATES.map((s) => [s.code, s.name]));
+const CODE_BY_NAME = new Map(US_STATES.map((s) => [s.name, s.code]));
 
 export function stateName(code: string | null | undefined): string | null {
   if (!code) return null;
   return BY_CODE.get(code) ?? null;
+}
+
+/** Maps a full state name (e.g. "Vermont", as congress.gov's API returns)
+ * to its 2-letter code. Returns null for non-state entries (DC, Puerto
+ * Rico, Guam, etc.) — those have no seat in HOUSE_SEATS_BY_STATE / this
+ * 50-state list, by design (see us-house-apportionment.ts). */
+export function codeForStateName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  return CODE_BY_NAME.get(name) ?? null;
 }

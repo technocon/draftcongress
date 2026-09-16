@@ -7,6 +7,9 @@ export interface RaceDetail {
   cycle: string;
   party: string;
   rating: string;
+  /** Real seat state (see prisma/seed.ts) — always present, independent of
+   * whether an incumbent has been seeded/imported for this seat. */
+  state: string;
   x: number;
   y: number;
   incumbent: {
@@ -69,6 +72,7 @@ export async function getChamberRaceMap(chamberId: string, cycle = "2026"): Prom
     cycle: r.cycle,
     party: r.party,
     rating: r.rating,
+    state: r.state,
     x: points[i]?.x ?? 0,
     y: points[i]?.y ?? 0,
     incumbent: r.incumbent

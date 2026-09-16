@@ -14,6 +14,8 @@
  * real ingestion is wired up. Do not treat this seed data as authoritative.
  */
 import { createAdminClient } from "../src/server/db/client";
+import { HOUSE_SEATS_BY_STATE, houseDistrictLabel } from "../src/lib/us-house-apportionment";
+import { US_STATES } from "../src/lib/us-states";
 
 const db = createAdminClient();
 
@@ -233,23 +235,27 @@ export async function main() {
     }
   }
 
-  // --- Reference data: one Race per seat, both chambers (the /congress
-  // arc-chart's data source). Illustrative PLACEHOLDER party/rating
-  // values — see the model comment in schema.prisma. Deterministic via a
+  // --- Reference data: one Race per real seat, both chambers (the
+  // /congress arc chart + per-state district map's data source). Seat
+  // identity (state/district) is REAL, generated from
+  // HOUSE_SEATS_BY_STATE — only party/rating are illustrative PLACEHOLDER
+  // values (see the model comment in schema.prisma). Deterministic via a
   // fixed-seed PRNG so re-running this script doesn't reshuffle ratings.
+  // Each illustrative Legislator above is pinned to district 1 (House) or
+  // Senate Seat 1 of their own seeded `state`, so they have a full
+  // incumbent record to drill into from that real seat.
+  const houseIncumbents = legislators
+    .filter((l) => l.chamber === house)
+    .map((l) => ({ key: l.key, state: l.state }));
+  const senateIncumbents = legislators
+    .filter((l) => l.chamber === senate)
+    .map((l) => ({ key: l.key, state: l.state }));
+
   const raceCount = await seedRaces({
     house,
     senate,
-    incumbents: [
-      { key: "leg-1", seatNum: 1 },
-      { key: "leg-2", seatNum: 2 },
-      { key: "leg-3", seatNum: 3 },
-      { key: "leg-6", seatNum: 4 },
-    ],
-    senateIncumbents: [
-      { key: "leg-4", seatNum: 1 },
-      { key: "leg-5", seatNum: 2 },
-    ],
+    incumbents: houseIncumbents,
+    senateIncumbents,
     legislatorRecordByKey,
   });
 
@@ -301,19 +307,23 @@ function mulberry32(seed: number): () => number {
 type RaceRatingValue = "safe" | "likely" | "lean" | "toss_up";
 
 /**
- * One Race row per seat in each chamber — illustrative PLACEHOLDER party
- * splits and competitiveness ratings (see the Race model comment in
- * schema.prisma), roughly shaped like real aggregate chamber composition
- * but not sourced from any real race-ratings feed. A handful of seats are
- * pinned to our already-seeded illustrative Legislators so those have a
- * full incumbent record to drill into; the rest get incumbentLegislatorId
- * = null.
+ * One Race row per REAL seat in each chamber (real state + district
+ * identity, from HOUSE_SEATS_BY_STATE — see src/lib/us-house-apportionment.ts)
+ * — the /congress arc chart's and the per-state district map's data
+ * source. party/rating are illustrative PLACEHOLDER values (see the Race
+ * model comment in schema.prisma), roughly shaped like real aggregate
+ * chamber composition but not sourced from any real race-ratings feed —
+ * scripts/import-congress-members.ts overwrites party + incumbent with
+ * real congress.gov data when CONGRESS_GOV_API_KEY is configured. A
+ * handful of seats are pinned here to our already-seeded illustrative
+ * Legislators so those have a full incumbent record to drill into without
+ * needing an API key; the rest get incumbentLegislatorId = null.
  */
 async function seedRaces(input: {
   house: { id: string };
   senate: { id: string };
-  incumbents: Array<{ key: string; seatNum: number }>;
-  senateIncumbents: Array<{ key: string; seatNum: number }>;
+  incumbents: Array<{ key: string; state: string }>;
+  senateIncumbents: Array<{ key: string; state: string }>;
   legislatorRecordByKey: Map<string, { id: string; party: string; chamberId: string }>;
 }): Promise<number> {
   const { house, senate, incumbents, senateIncumbents, legislatorRecordByKey } = input;
@@ -338,39 +348,57 @@ async function seedRaces(input: {
     return parties;
   }
 
-  async function seedChamberRaces(
-    chamber: { id: string },
-    totalSeats: number,
-    rCount: number,
-    seatLabelPrefix: string,
-    pinnedIncumbents: Array<{ key: string; seatNum: number }>
-  ) {
-    const parties = shuffledParties(totalSeats, rCount);
-    const pinnedBySeat = new Map(pinnedIncumbents.map((p) => [p.seatNum, p.key]));
+  async function upsertRace(chamberId: string, seatLabel: string, state: string, district: number | null, party: string, rating: RaceRatingValue, incumbentLegislatorId: string | null) {
+    await db.race.upsert({
+      where: { chamberId_seatLabel_cycle: { chamberId, seatLabel, cycle } },
+      update: { state, district, party, rating, incumbentLegislatorId },
+      create: { chamberId, seatLabel, cycle, state, district, party, rating, incumbentLegislatorId },
+    });
+  }
 
-    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) {
-      const pinnedKey = pinnedBySeat.get(seatNum);
+  // --- House: one Race per real district, generated from apportionment ---
+  const pinnedHouseByState = new Map(incumbents.map((p) => [p.state, p.key]));
+  const houseParties = shuffledParties(435, 219);
+  let houseSeatIndex = 0;
+  for (const [state, seatCount] of Object.entries(HOUSE_SEATS_BY_STATE)) {
+    for (let district = 1; district <= seatCount; district++) {
+      // Only district 1 of a pinned incumbent's state gets pinned — the
+      // rest of that state's districts are unpinned like any other seat.
+      const pinnedKey = district === 1 ? pinnedHouseByState.get(state) : undefined;
       const pinned = pinnedKey ? legislatorRecordByKey.get(pinnedKey) : undefined;
-      const seatLabel = `${seatLabelPrefix} ${seatNum}`;
-
-      await db.race.upsert({
-        where: { chamberId_seatLabel_cycle: { chamberId: chamber.id, seatLabel, cycle } },
-        update: {},
-        create: {
-          chamberId: chamber.id,
-          seatLabel,
-          cycle,
-          party: pinned?.party ?? parties[seatNum - 1],
-          rating: pinned ? "safe" : pickRating(),
-          incumbentLegislatorId: pinned?.id ?? null,
-        },
-      });
+      await upsertRace(
+        house.id,
+        houseDistrictLabel(state, district),
+        state,
+        district,
+        pinned?.party ?? houseParties[houseSeatIndex],
+        pinned ? "safe" : pickRating(),
+        pinned?.id ?? null
+      );
+      houseSeatIndex++;
     }
   }
 
-  // Roughly today's real aggregate splits — illustrative, not live data.
-  await seedChamberRaces(house, 435, 219, "District", incumbents);
-  await seedChamberRaces(senate, 100, 52, "Senate Seat", senateIncumbents);
+  // --- Senate: 2 seats per state (real, no district subdivision) ---
+  const pinnedSenateByState = new Map(senateIncumbents.map((p) => [p.state, p.key]));
+  const senateParties = shuffledParties(100, 52);
+  let senateSeatIndex = 0;
+  for (const s of US_STATES) {
+    for (let seatNum = 1; seatNum <= 2; seatNum++) {
+      const pinnedKey = seatNum === 1 ? pinnedSenateByState.get(s.code) : undefined;
+      const pinned = pinnedKey ? legislatorRecordByKey.get(pinnedKey) : undefined;
+      await upsertRace(
+        senate.id,
+        `${s.code} Senate Seat ${seatNum}`,
+        s.code,
+        null,
+        pinned?.party ?? senateParties[senateSeatIndex],
+        pinned ? "safe" : pickRating(),
+        pinned?.id ?? null
+      );
+      senateSeatIndex++;
+    }
+  }
 
   return 435 + 100;
 }

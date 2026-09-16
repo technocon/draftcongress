@@ -233,10 +233,17 @@ enum RaceRating {
 }
 
 model Race {
-  id                    String     @id @default(uuid()) @db.Uuid
-  chamberId             String     @map("chamber_id") @db.Uuid
-  seatLabel             String     @map("seat_label") // e.g. "District 12", "Senate Seat 4" — illustrative, not a real district
-  cycle                 String
+  id        String @id @default(uuid()) @db.Uuid
+  chamberId String @map("chamber_id") @db.Uuid
+  seatLabel String @map("seat_label") // e.g. "TX-4", "WY At-Large", "CA Senate Seat 1" — derived from state/district below
+  cycle     String
+  // Real seat identity (see src/lib/us-house-apportionment.ts for the House
+  // seats-per-state table this is generated from) — NOT illustrative, unlike
+  // party/rating below. This is what a state's congressional-district map
+  // (src/server/domain/charts/state-race-map.ts) groups/looks races up by.
+  state    String // 2-letter USPS code
+  district Int? // 1-based House district (at-large states use 1); null for Senate seats
+
   party                 String // incumbent/leaning party — "D" | "R" | "I"
   rating                RaceRating @default(safe)
   incumbentLegislatorId String?    @map("incumbent_legislator_id") @db.Uuid
@@ -246,6 +253,7 @@ model Race {
 
   @@unique([chamberId, seatLabel, cycle])
   @@index([chamberId, cycle])
+  @@index([chamberId, state])
   @@map("races")
 }
 

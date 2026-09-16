@@ -2,25 +2,14 @@
 
 import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
+import Link from "next/link";
 import { EChart } from "./echart";
 import type { RaceDetail } from "@/server/domain/charts/race-map";
 import { StateFlag } from "@/components/state-flag";
-
-const PARTY_BASE: Record<string, string> = { D: "#2563eb", R: "#dc2626", I: "#7c3aed" };
-const RATING_FACTOR: Record<string, number> = { safe: 1, likely: 0.75, lean: 0.55, toss_up: 0.35 };
-const RATING_LABEL: Record<string, string> = { safe: "Safe", likely: "Likely", lean: "Lean", toss_up: "Toss-up" };
-
-function mixWithWhite(hex: string, factor: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const mix = (c: number) => Math.round(c * factor + 255 * (1 - factor));
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
-}
+import { PARTY_BASE, RATING_LABEL, seatColor } from "./party-colors";
 
 function raceColor(race: RaceDetail): string {
-  const base = PARTY_BASE[race.party] ?? "#6b7280";
-  return mixWithWhite(base, RATING_FACTOR[race.rating] ?? 1);
+  return seatColor(race.party, race.rating);
 }
 
 /**
@@ -115,6 +104,10 @@ export function RaceArcChart({ chamberName, races }: { chamberName: string; race
               Close ✕
             </button>
           </div>
+
+          <Link href={`/congress/states/${selected.state}`} className="headline-link text-xs mt-2 inline-block">
+            View {selected.state}&apos;s district map →
+          </Link>
 
           {selected.incumbent ? (
             <div className="mt-3 flex flex-col gap-2">

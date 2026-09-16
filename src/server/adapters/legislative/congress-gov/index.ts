@@ -6,15 +6,13 @@ import type { ChamberRef, LegislativeDataPort, RawLegislativeEvent } from "../po
  * GovTrack"; committee actions here too, since congress.gov's bill-action
  * feed includes committee-referral actions).
  *
- * IMPORTANT: this is built against the documented shape of
- * https://api.congress.gov/v3 from memory/public docs, NOT verified
- * against a live response (no API key exists yet — see the architecture
- * plan §4/§8, decision #4: adapters are built now, activated automatically
- * once CONGRESS_GOV_API_KEY is set). Before relying on this in production:
- * confirm field names (especially `latestAction`, `sponsors`, pagination
- * via `offset`/`limit`) against a live call and adjust `mapBillToEvents`
- * accordingly. Until then, getLegislativeAdapter() falls back to the
- * fixture adapter, so this code path is inert.
+ * IMPORTANT: the request/pagination shape (this file) is now confirmed
+ * against a live call — `fromDateTime` specifically needs
+ * '%Y-%m-%dT%H:%M:%SZ' with no milliseconds, unlike Date#toISOString()'s
+ * default. `mapBillToEvents`'s response-field assumptions (`latestAction`,
+ * `sponsors`) are still unverified against a live bill payload — confirm
+ * those before relying on this in production. getLegislativeAdapter()
+ * falls back to the fixture adapter whenever CONGRESS_GOV_API_KEY is unset.
  */
 
 const BASE_URL = "https://api.congress.gov/v3";
@@ -40,7 +38,10 @@ export function createCongressGovAdapter(apiKey: string): LegislativeDataPort {
     url.searchParams.set("api_key", apiKey);
     url.searchParams.set("format", "json");
     url.searchParams.set("sort", "updateDate+asc");
-    url.searchParams.set("fromDateTime", since.toISOString());
+    // Confirmed against a live 400 response: congress.gov wants
+    // '%Y-%m-%dT%H:%M:%SZ' (no milliseconds) — Date#toISOString() includes
+    // them, so they must be stripped.
+    url.searchParams.set("fromDateTime", since.toISOString().replace(/\.\d{3}Z$/, "Z"));
     url.searchParams.set("limit", "250");
 
     const res = await fetch(url, { headers: { Accept: "application/json" } });
