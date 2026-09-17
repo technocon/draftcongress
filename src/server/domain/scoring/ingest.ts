@@ -107,7 +107,7 @@ export interface IngestionSummary {
 export async function runLegislativeIngestion(since: Date): Promise<IngestionSummary[]> {
   const adapter = getLegislativeAdapter();
   const sourceTag = process.env.CONGRESS_GOV_API_KEY ? "congress-gov" : "fixture-legislative";
-  const voteSourceTag = process.env.CONGRESS_GOV_API_KEY ? "govtrack" : "fixture-legislative";
+  const voteSourceTag = sourceTag; // votes are now also congress.gov-sourced (House only) — see ../../adapters/legislative/congress-gov
 
   const chambers = await prisma.chamber.findMany();
   const results: IngestionSummary[] = [];

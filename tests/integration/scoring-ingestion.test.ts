@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { main as seedReferenceData } from "../../prisma/seed";
 import { createAdminClient, prisma } from "../../src/server/db/client";
 import { withTenant } from "../../src/server/db/tenant-client";
@@ -10,8 +10,19 @@ import { computeSeasonStandings } from "../../src/server/domain/scoring/standing
  * Verifies the fixture-adapter ingestion pipeline end to end (SRD Phase-One
  * DoD, §13: "see live standings update from real scoring events" — real in
  * the sense of flowing through the real ingestion code path, fixture-backed
- * per the architecture plan §4 since no API keys exist yet).
+ * per the architecture plan §4). This is deliberately a pipeline-mechanics
+ * test (bloc attribution, idempotency, standings math against known fixed
+ * numbers) — it stubs CONGRESS_GOV_API_KEY/FEC_API_KEY to empty for this
+ * file even if a developer's real .env has them set for other features
+ * (e.g. importing real congress.gov member data), so it stays fast and
+ * deterministic rather than depending on live external APIs and today's
+ * real legislative activity. The real adapters are exercised live and
+ * separately — see src/server/adapters/legislative/congress-gov's and
+ * .../electoral/fec's own top-of-file comments for what's been confirmed
+ * against a real call.
  */
+vi.stubEnv("CONGRESS_GOV_API_KEY", "");
+vi.stubEnv("FEC_API_KEY", "");
 
 const admin = createAdminClient();
 const since = new Date("2026-01-01T00:00:00.000Z");
@@ -69,6 +80,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  vi.unstubAllEnvs();
   await admin.rosterBloc.deleteMany({ where: { rosterId: roster.id } });
   await admin.roster.deleteMany({ where: { id: roster.id } });
   await admin.season.deleteMany({ where: { id: season.id } });
