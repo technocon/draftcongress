@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { StateDelegation, StateSeatDetail } from "@/server/domain/charts/state-race-map";
 import { RATING_LABEL, seatColor } from "./party-colors";
 
@@ -76,6 +76,9 @@ function DistrictGrid({
   selectedId: string | null;
   onSelect: (seat: StateSeatDetail) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<{ seat: StateSeatDetail; x: number; y: number } | null>(null);
+
   const pathByDistrict = new Map((boundaries?.districts ?? []).map((d) => [d.district, d.path]));
   const missingAny = seats.some((s) => s.district == null || !pathByDistrict.has(s.district));
 
@@ -86,29 +89,63 @@ function DistrictGrid({
     return <PlainGridFallback seats={seats} selectedId={selectedId} onSelect={onSelect} />;
   }
 
+  function handleHover(e: React.MouseEvent, seat: StateSeatDetail) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setHover({ seat, x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }
+
   return (
-    <svg
-      viewBox={`0 0 ${boundaries.viewBoxWidth} ${boundaries.viewBoxHeight}`}
-      style={{ width: "auto", height: "auto", maxWidth: "100%", maxHeight: "75vh" }}
+    <div ref={containerRef} className="relative">
+      <svg
+        viewBox={`0 0 ${boundaries.viewBoxWidth} ${boundaries.viewBoxHeight}`}
+        style={{ width: "auto", height: "auto", maxWidth: "100%", maxHeight: "75vh" }}
+      >
+        {seats.map((seat) => {
+          const d = pathByDistrict.get(seat.district!)!;
+          const isSelected = selectedId === seat.id;
+          return (
+            <path
+              key={seat.id}
+              d={d}
+              fill={seatColor(seat.party, seat.rating)}
+              stroke={isSelected ? "var(--color-ink)" : "var(--color-paper)"}
+              strokeWidth={isSelected ? 0.6 : 0.15}
+              onMouseEnter={(e) => handleHover(e, seat)}
+              onMouseMove={(e) => handleHover(e, seat)}
+              onMouseLeave={() => setHover(null)}
+              onClick={() => onSelect(seat)}
+              className="cursor-pointer"
+            />
+          );
+        })}
+      </svg>
+      {hover && <SeatTooltip seat={hover.seat} x={hover.x} y={hover.y} />}
+    </div>
+  );
+}
+
+/** Hover popup for a district — quick-glance info (name/party/last
+ * election result); click still opens the fuller SeatDrilldown card
+ * below the map for blocs/scoring events. Positioned centered above the
+ * cursor so it doesn't need viewport-edge detection at typical map sizes. */
+function SeatTooltip({ seat, x, y }: { seat: StateSeatDetail; x: number; y: number }) {
+  return (
+    <div
+      className="pointer-events-none absolute z-10 rc-card px-3 py-2 text-xs shadow-lg"
+      style={{ left: x, top: y, transform: "translate(-50%, calc(-100% - 10px))", minWidth: 160 }}
     >
-      {seats.map((seat) => {
-        const d = pathByDistrict.get(seat.district!)!;
-        const isSelected = selectedId === seat.id;
-        return (
-          <path
-            key={seat.id}
-            d={d}
-            fill={seatColor(seat.party, seat.rating)}
-            stroke={isSelected ? "var(--color-ink)" : "var(--color-paper)"}
-            strokeWidth={isSelected ? 0.6 : 0.15}
-            onClick={() => onSelect(seat)}
-            className="cursor-pointer"
-          >
-            <title>{seat.seatLabel}</title>
-          </path>
-        );
-      })}
-    </svg>
+      <p className="text-sm font-semibold">{seat.seatLabel}</p>
+      <p className="text-[var(--color-ink-soft)]">
+        {seat.party === "D" ? "Democratic" : seat.party === "R" ? "Republican" : seat.party}
+      </p>
+      <p className="mt-1 font-medium">{seat.incumbent ? seat.incumbent.fullName : "No legislator record yet"}</p>
+      {seat.lastElectionPct != null && (
+        <p className="text-[var(--color-ink-soft)]">
+          Won {seat.lastElectionPct}% in {seat.lastElectionYear}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -173,6 +210,11 @@ function SeatDrilldown({ seat, onClose }: { seat: StateSeatDetail; onClose: () =
             {seat.party === "D" ? "Democratic" : seat.party === "R" ? "Republican" : seat.party}
             {" · "}
             {RATING_LABEL[seat.rating] ?? seat.rating}
+            {seat.lastElectionPct != null && (
+              <>
+                {" · "}Won {seat.lastElectionPct}% ({seat.lastElectionYear})
+              </>
+            )}
           </p>
         </div>
         <button onClick={onClose} className="text-xs text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">

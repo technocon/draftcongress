@@ -6,6 +6,11 @@ export interface StateSeatDetail {
   district: number | null;
   party: string;
   rating: string;
+  /** Winner's % of the vote in this seat's most recent logged general
+   * election — real (MEDSL/Harvard Dataverse) once imported, both null
+   * until then. House only — see the election-results adapter's comment. */
+  lastElectionYear: number | null;
+  lastElectionPct: number | null;
   incumbent: {
     id: string;
     fullName: string;
@@ -51,6 +56,8 @@ export async function getStateDelegation(stateCode: string, cycle = "2026"): Pro
     district: r.district,
     party: r.party,
     rating: r.rating,
+    lastElectionYear: r.lastElectionYear,
+    lastElectionPct: r.lastElectionPct,
     incumbent: r.incumbent
       ? {
           id: r.incumbent.id,

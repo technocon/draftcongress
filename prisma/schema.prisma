@@ -247,6 +247,16 @@ model Race {
   party                 String // incumbent/leaning party — "D" | "R" | "I"
   rating                RaceRating @default(safe)
   incumbentLegislatorId String?    @map("incumbent_legislator_id") @db.Uuid
+  // Real result from this seat's most recent logged GENERAL election —
+  // the winner's share of the district vote (fusion-ticket lines summed
+  // per candidate first, per MEDSL's own codebook guidance). Source: MIT
+  // Election Data + Science Lab's "U.S. House 1976–2024" dataset (CC0),
+  // via src/server/adapters/election-results — see that adapter's
+  // comment for why this needed a Harvard Dataverse API token rather than
+  // an anonymous download. Both null until scripts/import-election-results.ts
+  // has been run; NOT illustrative when present.
+  lastElectionYear Int?   @map("last_election_year")
+  lastElectionPct  Float? @map("last_election_pct")
 
   chamber   Chamber     @relation(fields: [chamberId], references: [id], onDelete: Cascade)
   incumbent Legislator? @relation(fields: [incumbentLegislatorId], references: [id], onDelete: SetNull)

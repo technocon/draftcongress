@@ -1,0 +1,6 @@
+[
+  { "state": "TX", "chamber": "house", "district": 1, "year": 2024, "winnerPct": 71.2 },
+  { "state": "CA", "chamber": "house", "district": 1, "year": 2024, "winnerPct": 64.8 },
+  { "state": "OH", "chamber": "house", "district": 1, "year": 2024, "winnerPct": 55.3 },
+  { "state": "WA", "chamber": "house", "district": 1, "year": 2024, "winnerPct": 58.9 }
+]

@@ -13,7 +13,8 @@
     "db:migrate:deploy": "dotenv -e .env -- prisma migrate deploy",
     "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
     "db:studio": "dotenv -e .env -- prisma studio",
-    "db:import-congress-members": "dotenv -e .env -- tsx scripts/import-congress-members.ts"
+    "db:import-congress-members": "dotenv -e .env -- tsx scripts/import-congress-members.ts",
+    "db:import-election-results": "dotenv -e .env -- tsx scripts/import-election-results.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
