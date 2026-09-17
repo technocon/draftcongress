@@ -3,25 +3,30 @@
 import { useState } from "react";
 import type { StateDelegation, StateSeatDetail } from "@/server/domain/charts/state-race-map";
 import { RATING_LABEL, seatColor } from "./party-colors";
-import stateDistrictLayouts from "@/lib/state-district-layouts.json";
 
-interface StateLayout {
+export interface StateBoundaryData {
   viewBoxWidth: number;
   viewBoxHeight: number;
-  outline: string;
-  points: { x: number; y: number }[];
+  districts: { district: number; path: string }[];
 }
 
 /**
- * A state's congressional delegation, tabbed House/Senate. House renders as
- * a schematic district "cartogram": real district count scattered inside
- * that state's real outline shape (src/lib/state-district-layouts.json,
- * precomputed by scripts/generate-state-district-layouts.ts from Census
- * boundary data) — NOT real per-district geographic boundaries, just real
- * count + real outer silhouette. Senate renders as two seat cards since
- * senators are elected statewide, with no districts to subdivide.
+ * A state's congressional delegation, tabbed House/Senate. House renders
+ * real district boundaries (`boundaries`, precomputed server-side by
+ * scripts/generate-district-boundaries.ts from Census cartographic
+ * boundary data — see src/app/congress/states/[code]/page.tsx, which reads
+ * just this one state's file and passes it down) — each district is its
+ * own real polygon, colored by incumbent party and shaded by
+ * competitiveness. Senate renders as two seat cards since senators are
+ * elected statewide, with no districts to subdivide.
  */
-export function StateDelegationView({ stateCode, delegation }: { stateCode: string; delegation: StateDelegation }) {
+export function StateDelegationView({
+  delegation,
+  boundaries,
+}: {
+  delegation: StateDelegation;
+  boundaries: StateBoundaryData | null;
+}) {
   const [chamber, setChamber] = useState<"house" | "senate">("house");
   const [selected, setSelected] = useState<StateSeatDetail | null>(null);
 
@@ -46,7 +51,7 @@ export function StateDelegationView({ stateCode, delegation }: { stateCode: stri
       {seats.length === 0 ? (
         <p className="text-sm text-[var(--color-ink-soft)]">No seats seeded for this chamber/state.</p>
       ) : chamber === "house" ? (
-        <DistrictGrid stateCode={stateCode} seats={seats} selectedId={selected?.id ?? null} onSelect={setSelected} />
+        <DistrictGrid boundaries={boundaries} seats={seats} selectedId={selected?.id ?? null} onSelect={setSelected} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {seats.map((seat) => (
@@ -61,51 +66,46 @@ export function StateDelegationView({ stateCode, delegation }: { stateCode: stri
 }
 
 function DistrictGrid({
-  stateCode,
+  boundaries,
   seats,
   selectedId,
   onSelect,
 }: {
-  stateCode: string;
+  boundaries: StateBoundaryData | null;
   seats: StateSeatDetail[];
   selectedId: string | null;
   onSelect: (seat: StateSeatDetail) => void;
 }) {
-  const layout = (stateDistrictLayouts as Record<string, StateLayout>)[stateCode];
+  const pathByDistrict = new Map((boundaries?.districts ?? []).map((d) => [d.district, d.path]));
+  const missingAny = seats.some((s) => s.district == null || !pathByDistrict.has(s.district));
 
-  // Should only happen if a state is missing from the precomputed layout
-  // file — falls back to a plain grid rather than rendering nothing.
-  if (!layout || layout.points.length < seats.length) {
+  // Should only happen if a state is missing from src/lib/district-boundaries
+  // or a district number doesn't line up — falls back to a plain grid
+  // rather than rendering a broken/partial map.
+  if (!boundaries || missingAny) {
     return <PlainGridFallback seats={seats} selectedId={selectedId} onSelect={onSelect} />;
   }
 
-  // Points are precomputed in reading order (top-to-bottom); seats are
-  // already sorted by district number (see getStateDelegation) — the pairing
-  // is a schematic placement, not real per-district geography.
-  const cellRadius = Math.max(1.8, Math.min(5, Math.sqrt((layout.viewBoxWidth * layout.viewBoxHeight) / seats.length) * 0.4));
-
   return (
-    <svg viewBox={`0 0 ${layout.viewBoxWidth} ${layout.viewBoxHeight}`} className="w-full max-w-sm" style={{ maxHeight: "70vh" }}>
-      <path d={layout.outline} fill="var(--color-paper-muted)" stroke="var(--color-rule)" strokeWidth={0.5} />
-      {seats.map((seat, i) => {
-        const p = layout.points[i];
+    <svg
+      viewBox={`0 0 ${boundaries.viewBoxWidth} ${boundaries.viewBoxHeight}`}
+      style={{ width: "auto", height: "auto", maxWidth: "100%", maxHeight: "75vh" }}
+    >
+      {seats.map((seat) => {
+        const d = pathByDistrict.get(seat.district!)!;
         const isSelected = selectedId === seat.id;
         return (
-          <rect
+          <path
             key={seat.id}
-            x={p.x - cellRadius}
-            y={p.y - cellRadius}
-            width={cellRadius * 2}
-            height={cellRadius * 2}
-            rx={cellRadius * 0.3}
+            d={d}
             fill={seatColor(seat.party, seat.rating)}
-            stroke={isSelected ? "var(--color-ink)" : "none"}
-            strokeWidth={isSelected ? 0.8 : 0}
+            stroke={isSelected ? "var(--color-ink)" : "var(--color-paper)"}
+            strokeWidth={isSelected ? 0.6 : 0.15}
             onClick={() => onSelect(seat)}
             className="cursor-pointer"
           >
             <title>{seat.seatLabel}</title>
-          </rect>
+          </path>
         );
       })}
     </svg>

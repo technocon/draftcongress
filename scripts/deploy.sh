@@ -19,6 +19,20 @@ npx prisma migrate deploy
 echo "==> Building (standalone output)..."
 npm run build
 
+# Next.js's standalone output does NOT include public/ or .next/static —
+# that's documented, expected behavior (the standalone server.js only
+# gets what its own require/import graph traces), not something `next
+# build` forgot. Both must be copied alongside server.js by hand. This
+# matters for more than static-file niceties now: public/flags/*.svg (the
+# league home-state flags) AND public/district-boundaries/*.json (real
+# congressional district shapes, read server-side by
+# src/app/congress/states/[code]/page.tsx) both live under public/ and
+# silently 404/degrade to the plain-grid fallback without this step.
+echo "==> Copying public/ and .next/static into the standalone output..."
+cp -r public .next/standalone/public
+mkdir -p .next/standalone/.next/static
+cp -r .next/static/. .next/standalone/.next/static/
+
 echo "==> Build complete."
 echo
 echo "!! This script does NOT restart the app for you — Hostinger's restart"

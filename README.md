@@ -64,6 +64,8 @@ Then open http://localhost:3000 (or whatever port you ran `next dev` on).
 | `npm run db:migrate:deploy` | `prisma migrate deploy` — apply existing migrations (prod/CI) |
 | `npm run db:seed` | Re-run the (idempotent) reference-data seed |
 | `npm run db:studio` | Prisma Studio against your local DB |
+| `npm run db:import-congress-members` | Pull real current members from congress.gov into Legislator/Race (needs `CONGRESS_GOV_API_KEY`; fixture data otherwise) |
+| `npx tsx scripts/generate-district-boundaries.ts <shp>` | Regenerate `public/district-boundaries/*.json` (real House district shapes) from a Census cartographic boundary shapefile — see the script's own header comment for the download URL and full usage. Only needs re-running after redistricting. |
 
 ## Architecture notes worth knowing before you touch this
 
