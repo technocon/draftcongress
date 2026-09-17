@@ -10,6 +10,9 @@ export interface StateBoundaryData {
   districts: { district: number; path: string }[];
 }
 
+const formatMoney = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(n);
+
 /**
  * A state's congressional delegation, tabbed House/Senate. House renders
  * real district boundaries (`boundaries`, precomputed server-side by
@@ -145,6 +148,12 @@ function SeatTooltip({ seat, x, y }: { seat: StateSeatDetail; x: number; y: numb
           Won {seat.lastElectionPct}% in {seat.lastElectionYear}
         </p>
       )}
+      {seat.financeReceipts != null && (
+        <p className="text-[var(--color-ink-soft)]">
+          {formatMoney(seat.financeReceipts)} raised
+          {seat.financeCashOnHand != null && ` · ${formatMoney(seat.financeCashOnHand)} on hand`}
+        </p>
+      )}
     </div>
   );
 }
@@ -226,6 +235,21 @@ function SeatDrilldown({ seat, onClose }: { seat: StateSeatDetail; onClose: () =
         <div className="mt-3 flex flex-col gap-2">
           <p className="headline-link text-base">{seat.incumbent.fullName}</p>
 
+          {seat.financeReceipts != null && (
+            <div>
+              {/* FEC's candidate name is often a fuller legal name than congress.gov's
+                  (e.g. "John Kevin Sr. Ellzey" for "Jake Ellzey") — a plain string
+                  compare against seat.incumbent.fullName would false-flag most of
+                  these as a different person, so this only names whose FEC record
+                  the numbers came from, without asserting whether it matches. */}
+              <p className="text-xs section-label mb-1">Campaign finance — FEC record: {seat.financeCandidate}</p>
+              <p className="text-[var(--color-ink-soft)]">
+                {formatMoney(seat.financeReceipts ?? 0)} raised · {formatMoney(seat.financeDisbursements ?? 0)} spent ·{" "}
+                {formatMoney(seat.financeCashOnHand ?? 0)} cash on hand
+              </p>
+            </div>
+          )}
+
           {seat.incumbent.blocs.length > 0 && (
             <div>
               <p className="text-xs section-label mb-1">Caucus / bloc membership</p>
@@ -251,7 +275,18 @@ function SeatDrilldown({ seat, onClose }: { seat: StateSeatDetail; onClose: () =
           )}
         </div>
       ) : (
-        <p className="mt-3 text-[var(--color-ink-soft)]">No legislator record seeded/imported for this seat yet.</p>
+        <div className="mt-3 flex flex-col gap-2">
+          <p className="text-[var(--color-ink-soft)]">No legislator record seeded/imported for this seat yet.</p>
+          {seat.financeReceipts != null && (
+            <div>
+              <p className="text-xs section-label mb-1">Campaign finance ({seat.financeCandidate})</p>
+              <p className="text-[var(--color-ink-soft)]">
+                {formatMoney(seat.financeReceipts ?? 0)} raised · {formatMoney(seat.financeDisbursements ?? 0)} spent ·{" "}
+                {formatMoney(seat.financeCashOnHand ?? 0)} cash on hand
+              </p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

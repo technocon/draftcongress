@@ -1,0 +1,6 @@
+[
+  { "state": "TX", "chamber": "house", "district": 1, "cycle": 2026, "candidateName": "Nathaniel Moran", "isIncumbent": true, "receipts": 1797847.68, "disbursements": 1401247.78, "cashOnHand": 777546.02 },
+  { "state": "CA", "chamber": "house", "district": 1, "cycle": 2026, "candidateName": "B. Sample", "isIncumbent": true, "receipts": 950000, "disbursements": 400000, "cashOnHand": 550000 },
+  { "state": "OH", "chamber": "house", "district": 1, "cycle": 2026, "candidateName": "C. Sample", "isIncumbent": true, "receipts": 620000, "disbursements": 300000, "cashOnHand": 320000 },
+  { "state": "WA", "chamber": "house", "district": 1, "cycle": 2026, "candidateName": "F. Sample", "isIncumbent": true, "receipts": 480000, "disbursements": 210000, "cashOnHand": 270000 }
+]

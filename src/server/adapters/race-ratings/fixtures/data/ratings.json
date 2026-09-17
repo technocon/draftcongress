@@ -1,0 +1,4 @@
+[
+  { "state": "NY", "chamber": "senate", "rating": "safe" },
+  { "state": "TX", "chamber": "senate", "rating": "likely" }
+]

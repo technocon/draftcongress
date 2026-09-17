@@ -257,6 +257,21 @@ model Race {
   // has been run; NOT illustrative when present.
   lastElectionYear Int?   @map("last_election_year")
   lastElectionPct  Float? @map("last_election_pct")
+  // Real campaign-finance snapshot for the CURRENT election cycle (not the
+  // last one, unlike lastElectionPct above) — from FEC/OpenFEC via
+  // src/server/adapters/campaign-finance. financeCandidate is whoever
+  // FEC flags "Incumbent" for this race, or the top fundraiser if it's an
+  // open seat/no incumbent flag — not guaranteed to be the same person as
+  // `incumbent` above (Legislator is congress.gov's CURRENT officeholder;
+  // financeCandidate is FEC's leading candidate for the race in progress,
+  // which matters for Senate seats not up for election this cycle — see
+  // that adapter's comment on the two-Senate-seats ambiguity). All four
+  // null until scripts/import-campaign-finance.ts has been run.
+  financeCycle          Int?    @map("finance_cycle")
+  financeCandidate      String? @map("finance_candidate")
+  financeReceipts       Float?  @map("finance_receipts")
+  financeDisbursements  Float?  @map("finance_disbursements")
+  financeCashOnHand     Float?  @map("finance_cash_on_hand")
 
   chamber   Chamber     @relation(fields: [chamberId], references: [id], onDelete: Cascade)
   incumbent Legislator? @relation(fields: [incumbentLegislatorId], references: [id], onDelete: SetNull)

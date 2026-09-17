@@ -11,6 +11,15 @@ export interface StateSeatDetail {
    * until then. House only — see the election-results adapter's comment. */
   lastElectionYear: number | null;
   lastElectionPct: number | null;
+  /** Current-cycle campaign-finance snapshot from FEC/OpenFEC — the
+   * leading (FEC-flagged incumbent, or top-fundraiser) candidate's
+   * receipts/disbursements/cash-on-hand for the race in progress, NOT
+   * necessarily the same person as `incumbent` below. All null until
+   * scripts/import-campaign-finance.ts has been run. */
+  financeCandidate: string | null;
+  financeReceipts: number | null;
+  financeDisbursements: number | null;
+  financeCashOnHand: number | null;
   incumbent: {
     id: string;
     fullName: string;
@@ -58,6 +67,10 @@ export async function getStateDelegation(stateCode: string, cycle = "2026"): Pro
     rating: r.rating,
     lastElectionYear: r.lastElectionYear,
     lastElectionPct: r.lastElectionPct,
+    financeCandidate: r.financeCandidate,
+    financeReceipts: r.financeReceipts,
+    financeDisbursements: r.financeDisbursements,
+    financeCashOnHand: r.financeCashOnHand,
     incumbent: r.incumbent
       ? {
           id: r.incumbent.id,

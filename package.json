@@ -14,7 +14,9 @@
     "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
     "db:studio": "dotenv -e .env -- prisma studio",
     "db:import-congress-members": "dotenv -e .env -- tsx scripts/import-congress-members.ts",
-    "db:import-election-results": "dotenv -e .env -- tsx scripts/import-election-results.ts"
+    "db:import-election-results": "dotenv -e .env -- tsx scripts/import-election-results.ts",
+    "db:import-campaign-finance": "dotenv -e .env -- tsx scripts/import-campaign-finance.ts",
+    "db:import-race-ratings": "dotenv -e .env -- tsx scripts/import-race-ratings.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

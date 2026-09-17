@@ -66,6 +66,8 @@ Then open http://localhost:3000 (or whatever port you ran `next dev` on).
 | `npm run db:studio` | Prisma Studio against your local DB |
 | `npm run db:import-congress-members` | Pull real current members from congress.gov into Legislator/Race (needs `CONGRESS_GOV_API_KEY`; fixture data otherwise) |
 | `npm run db:import-election-results` | Pull each House seat's real last-election win % from MEDSL/Harvard Dataverse into Race (needs `HARVARD_DATAVERSE_API_TOKEN`; fixture data otherwise) |
+| `npm run db:import-campaign-finance` | Pull real current-cycle campaign-finance totals (receipts/disbursements/cash on hand) from OpenFEC into Race — ~485 throttled requests, takes a few minutes (needs `FEC_API_KEY`; fixture data otherwise) |
+| `npm run db:import-race-ratings` | Overwrite Senate Race.rating with real Cook/Sabato/Inside Elections ratings from decisionlabs.ai (needs `DECISION_LABS_RATINGS_ENABLED="true"`; fixture data otherwise — House ratings stay illustrative, no House source found yet) |
 | `npx tsx scripts/generate-district-boundaries.ts <shp>` | Regenerate `public/district-boundaries/*.json` (real House district shapes) from a Census cartographic boundary shapefile — see the script's own header comment for the download URL and full usage. Only needs re-running after redistricting. |
 
 ## Architecture notes worth knowing before you touch this
