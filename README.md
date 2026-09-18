@@ -143,3 +143,15 @@ production.
 tenant RLS isolation (including the fail-closed-on-reused-connection case), the fixture-driven scoring ingestion
 pipeline end to end, and a full async draft (league → season → draft → picks → completion → standings, plus
 rejection cases for out-of-turn picks, missing entitlement, and an over-subscribed roster size).
+
+## License
+Shield: [![CC BY-ND 4.0][cc-by-nd-shield]][cc-by-nd]
+
+This work is licensed under a
+[Creative Commons Attribution-NoDerivs 4.0 International License][cc-by-nd].
+
+[![CC BY-ND 4.0][cc-by-nd-image]][cc-by-nd]
+
+[cc-by-nd]: https://creativecommons.org/licenses/by-nd/4.0/
+[cc-by-nd-image]: https://licensebuttons.net/l/by-nd/4.0/88x31.png
+[cc-by-nd-shield]: https://img.shields.io/badge/License-CC%20BY--ND%204.0-lightgrey.svg
