@@ -68,6 +68,7 @@ Then open http://localhost:3000 (or whatever port you ran `next dev` on).
 | `npm run db:import-election-results` | Pull each House seat's real last-election win % from MEDSL/Harvard Dataverse into Race (needs `HARVARD_DATAVERSE_API_TOKEN`; fixture data otherwise) |
 | `npm run db:import-campaign-finance` | Pull real current-cycle campaign-finance totals (receipts/disbursements/cash on hand) from OpenFEC into Race — ~485 throttled requests, takes a few minutes (needs `FEC_API_KEY`; fixture data otherwise) |
 | `npm run db:import-race-ratings` | Overwrite Senate Race.rating with real Cook/Sabato/Inside Elections ratings from decisionlabs.ai (needs `DECISION_LABS_RATINGS_ENABLED="true"`; fixture data otherwise — House ratings stay illustrative, no House source found yet) |
+| `npm run db:assign-senate-classes` | One-time (rerun-safe): sets Race.senateClass for each Senate seat from `src/lib/senate-classes-by-bioguide.json` — run after `db:import-congress-members` so it has real officeholders to match against |
 | `npx tsx scripts/generate-district-boundaries.ts <shp>` | Regenerate `public/district-boundaries/*.json` (real House district shapes) from a Census cartographic boundary shapefile — see the script's own header comment for the download URL and full usage. Only needs re-running after redistricting. |
 
 ## Architecture notes worth knowing before you touch this
@@ -95,6 +96,13 @@ Then open http://localhost:3000 (or whatever port you ran `next dev` on).
   fabricating general-election win/loss data it can't actually source (SRD open question #3, still unresolved).
 - **PLACEHOLDER data**: `prisma/seed.ts`'s `ScoringRule` point values and the illustrative legislators/blocs it
   seeds are explicitly not real — labeled as such in the file. Don't ship these to a public launch as-is.
+- **League.chamberScope** ("all" | "house" | "senate", chosen at league creation) restricts which blocs are
+  draftable (`Bloc.chamberId` already exists — see `src/server/domain/leagues/chamber-scope.ts`, used by
+  `start-draft.ts`, `auto-pick.ts`, `submit-pick.ts`, and the draft board) and pre-scopes that league's "View races"
+  link on `/congress`. The Senate half of that filter (`?upOnly=true`, seats actually up this cycle) depends on
+  `Race.senateClass`, real reference data from `db:assign-senate-classes` — it only models the regular staggered
+  6-year rotation, not mid-cycle special elections, so a seat with an active special election this cycle but a
+  different regular class won't show up as "up" (a known, documented gap, not a bug).
 
 ## Environment variables
 

@@ -24,10 +24,13 @@ interface Weights {
  * grouping to do, just per-bloc totals.
  */
 export async function computeBlocLeaderboard(
-  input: { taxonomyId: string; weights: Weights } | { blocIds: string[]; weights: Weights }
+  input: { taxonomyId: string; chamberId?: string; weights: Weights } | { blocIds: string[]; weights: Weights }
 ): Promise<BlocScore[]> {
   const blocs = await prisma.bloc.findMany({
-    where: "taxonomyId" in input ? { taxonomyId: input.taxonomyId } : { id: { in: input.blocIds } },
+    where:
+      "taxonomyId" in input
+        ? { taxonomyId: input.taxonomyId, ...(input.chamberId ? { chamberId: input.chamberId } : {}) }
+        : { id: { in: input.blocIds } },
     select: { id: true, name: true },
   });
   if (blocs.length === 0) return [];

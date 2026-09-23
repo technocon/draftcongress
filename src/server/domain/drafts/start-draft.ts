@@ -3,6 +3,7 @@ import { prisma } from "@/server/db/client";
 import { DraftError } from "./errors";
 import { shuffle } from "./pick-order";
 import { computeTotalPicks } from "./draft-math";
+import { blocChamberFilter } from "../leagues/chamber-scope";
 
 const DEFAULT_PICK_TIME_LIMIT_SECONDS = 24 * 60 * 60; // 24h — league-configurable later
 
@@ -33,10 +34,14 @@ export async function startDraft(tenantId: string, seasonId: string) {
       );
     }
 
-    // Total blocs in the taxonomy, minus any this season already carried
-    // over via a keeper policy (start-season.ts) — those are unavailable
-    // to draft again, they're already owned.
-    const taxonomyBlocCount = await prisma.bloc.count({ where: { taxonomyId: season.league.blocTaxonomyId } });
+    // Total blocs in the taxonomy (narrowed by the league's chamber scope,
+    // if any — see chamber-scope.ts), minus any this season already
+    // carried over via a keeper policy (start-season.ts) — those are
+    // unavailable to draft again, they're already owned.
+    const chamberFilter = await blocChamberFilter(prisma, season.league.chamberScope);
+    const taxonomyBlocCount = await prisma.bloc.count({
+      where: { taxonomyId: season.league.blocTaxonomyId, ...chamberFilter },
+    });
     const keptCount = await tx.rosterBloc.count({ where: { seasonId, draftPickId: null } });
     const availableBlocs = taxonomyBlocCount - keptCount;
 

@@ -23,13 +23,24 @@ function loadBoundaries(stateCode: string): StateBoundaryData | null {
   }
 }
 
-export default async function CongressStatePage({ params }: { params: Promise<{ code: string }> }) {
+export default async function CongressStatePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams: Promise<{ upOnly?: string }>;
+}) {
   const { code } = await params;
+  const { upOnly: upOnlyParam } = await searchParams;
+  const upOnly = upOnlyParam === "true";
   const stateCode = code.toUpperCase();
   const name = stateName(stateCode);
   if (!name) notFound();
 
-  const [delegation, boundaries] = await Promise.all([getStateDelegation(stateCode), Promise.resolve(loadBoundaries(stateCode))]);
+  const [delegation, boundaries] = await Promise.all([
+    getStateDelegation(stateCode, "2026", upOnly),
+    Promise.resolve(loadBoundaries(stateCode)),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">

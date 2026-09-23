@@ -74,6 +74,14 @@ export default async function LeaguesPage({
             <input name="rosterSize" type="number" defaultValue={8} min={1} max={50} className="rc-input" />
           </label>
           <label className="flex flex-col gap-1 text-sm">
+            Races
+            <select name="chamberScope" defaultValue="all" className="rc-input">
+              <option value="all">All — House &amp; Senate blocs</option>
+              <option value="house">House only</option>
+              <option value="senate">Senate only — seats up this cycle</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
             Redraft policy
             <select name="redraftPolicy" defaultValue="full_redraft" className="rc-input">
               <option value="full_redraft">Full redraft each cycle</option>

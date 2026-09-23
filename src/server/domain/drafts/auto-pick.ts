@@ -4,6 +4,7 @@ import { resolveEntitlement } from "@/server/auth/entitlement";
 import { DraftError } from "./errors";
 import { recordPick } from "./record-pick";
 import { computeTotalPicks } from "./draft-math";
+import { blocChamberFilter, type ChamberScope } from "../leagues/chamber-scope";
 
 /**
  * "Best available" auto-pick rule (SRD B2): lowest Bloc.draftRank among
@@ -16,6 +17,7 @@ import { computeTotalPicks } from "./draft-math";
 async function pickBestAvailableBloc(
   tenantId: string,
   taxonomyId: string,
+  chamberScope: ChamberScope,
   seasonId: string,
   ownerUserId: string
 ): Promise<string | null> {
@@ -23,10 +25,12 @@ async function pickBestAvailableBloc(
     tx.rosterBloc.findMany({ where: { seasonId }, select: { blocId: true } })
   );
   const entitlement = await resolveEntitlement(ownerUserId, tenantId);
+  const chamberFilter = await blocChamberFilter(prisma, chamberScope);
 
   const candidates = await prisma.bloc.findMany({
     where: {
       taxonomyId,
+      ...chamberFilter,
       id: { notIn: taken.map((t) => t.blocId) },
       ...(entitlement.tier === "paid" ? {} : { isPaidTier: false }),
     },
@@ -77,6 +81,7 @@ export async function resolveExpiredPicks(tenantId: string, draftEventId: string
       const blocId = await pickBestAvailableBloc(
         tenantId,
         draftEvent.season.league.blocTaxonomyId,
+        draftEvent.season.league.chamberScope,
         draftEvent.seasonId,
         draftEvent.currentPickerUserId
       );

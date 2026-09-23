@@ -202,7 +202,10 @@ function SeatTile({ seat, isSelected, onSelect }: { seat: StateSeatDetail; isSel
     >
       <span className="inline-block h-8 w-8 rounded-md shrink-0" style={{ background: seatColor(seat.party, seat.rating) }} />
       <div>
-        <p className="text-sm font-semibold">{seat.seatLabel}</p>
+        <p className="text-sm font-semibold flex items-center gap-1.5">
+          {seat.seatLabel}
+          {seat.isUpThisCycle && <span className="badge-pill">Up 2026</span>}
+        </p>
         <p className="text-xs text-[var(--color-ink-soft)]">{seat.incumbent ? seat.incumbent.fullName : RATING_LABEL[seat.rating] ?? seat.rating}</p>
       </div>
     </button>

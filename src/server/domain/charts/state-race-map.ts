@@ -1,5 +1,9 @@
 import { prisma } from "@/server/db/client";
 
+// Keep in sync with race-map.ts's CURRENT_SENATE_CLASS — the Senate class
+// up for regular election in the current (2026) cycle.
+const CURRENT_SENATE_CLASS = 2;
+
 export interface StateSeatDetail {
   id: string;
   seatLabel: string;
@@ -20,6 +24,10 @@ export interface StateSeatDetail {
   financeReceipts: number | null;
   financeDisbursements: number | null;
   financeCashOnHand: number | null;
+  /** Senate only — whether this seat's class is up in the current (2026)
+   * cycle (see Race.senateClass in schema.prisma). Always null for House
+   * (every House seat is up every cycle, so the concept doesn't apply). */
+  isUpThisCycle: boolean | null;
   incumbent: {
     id: string;
     fullName: string;
@@ -41,8 +49,11 @@ export interface StateDelegation {
  * "View state's district map" link. House seats are real (state, district)
  * identity from HOUSE_SEATS_BY_STATE; Senate has no districts to
  * subdivide, so both of a state's seats are returned as a flat pair.
+ *
+ * `upOnly`: when true, drops Senate seats not up in the current cycle
+ * (House is untouched — every House seat is up every cycle).
  */
-export async function getStateDelegation(stateCode: string, cycle = "2026"): Promise<StateDelegation> {
+export async function getStateDelegation(stateCode: string, cycle = "2026", upOnly = false): Promise<StateDelegation> {
   const races = await prisma.race.findMany({
     where: { state: stateCode, cycle },
     include: {
@@ -71,6 +82,7 @@ export async function getStateDelegation(stateCode: string, cycle = "2026"): Pro
     financeReceipts: r.financeReceipts,
     financeDisbursements: r.financeDisbursements,
     financeCashOnHand: r.financeCashOnHand,
+    isUpThisCycle: r.senateClass == null ? null : r.senateClass === CURRENT_SENATE_CLASS,
     incumbent: r.incumbent
       ? {
           id: r.incumbent.id,
@@ -94,7 +106,8 @@ export async function getStateDelegation(stateCode: string, cycle = "2026"): Pro
   const senate = races
     .filter((r) => r.chamber.name === "U.S. Senate")
     .sort((a, b) => a.seatLabel.localeCompare(b.seatLabel))
-    .map(toDetail);
+    .map(toDetail)
+    .filter((seat) => !upOnly || seat.isUpThisCycle);
 
   return { house, senate };
 }

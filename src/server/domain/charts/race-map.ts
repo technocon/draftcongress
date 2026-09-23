@@ -1,6 +1,12 @@
 import { prisma } from "@/server/db/client";
 import { computeHemicycleLayout } from "./hemicycle-layout";
 
+// The Senate class up for regular election in the CURRENT cycle (2026) —
+// see Race.senateClass in schema.prisma. Bump alongside every other
+// "2026"-cycle constant in this codebase (prisma/seed.ts, the various
+// scripts/import-*.ts CYCLE consts) when the app moves to a new cycle.
+const CURRENT_SENATE_CLASS = 2;
+
 export interface RaceDetail {
   id: string;
   seatLabel: string;
@@ -38,9 +44,16 @@ const RATING_ORDER: Record<string, number> = { safe: 0, likely: 1, lean: 2, toss
  * with the closer races naturally landing near the middle boundary —
  * the same visual convention real parliament/hemicycle charts use.
  */
-export async function getChamberRaceMap(chamberId: string, cycle = "2026"): Promise<RaceDetail[]> {
+/**
+ * `upOnly`: ONLY pass true for the Senate chamber — every House row has
+ * senateClass = null (not applicable), so filtering by
+ * `senateClass: CURRENT_SENATE_CLASS` against House rows would zero out
+ * the result entirely rather than being a harmless no-op. Callers are
+ * responsible for this (see src/app/congress/page.tsx).
+ */
+export async function getChamberRaceMap(chamberId: string, cycle = "2026", upOnly = false): Promise<RaceDetail[]> {
   const races = await prisma.race.findMany({
-    where: { chamberId, cycle },
+    where: { chamberId, cycle, ...(upOnly ? { senateClass: CURRENT_SENATE_CLASS } : {}) },
     include: {
       incumbent: {
         include: {

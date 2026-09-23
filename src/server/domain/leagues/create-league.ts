@@ -14,6 +14,9 @@ const createLeagueSchema = z.object({
   rosterSize: z.number().int().min(1).max(50).default(8),
   /** The league's cosmetic flag identity — see League.homeState in schema.prisma. */
   homeState: z.enum(STATE_CODES).optional(),
+  /** Restricts the league to House-only or Senate-only blocs — see
+   * League.chamberScope in schema.prisma. */
+  chamberScope: z.enum(["all", "house", "senate"]).default("all"),
   /** Defaults to the platform-default free taxonomy/scoring config if omitted — SRD A2's "sensible defaults, under 2 minutes." */
   blocTaxonomyId: z.string().uuid().optional(),
   scoringConfigId: z.string().uuid().optional(),
@@ -49,6 +52,7 @@ export async function createLeague(tenantId: string, adminUserId: string, input:
         isPrivate: parsed.isPrivate,
         rosterSize: parsed.rosterSize,
         homeState: parsed.homeState,
+        chamberScope: parsed.chamberScope,
         blocTaxonomyId: parsed.blocTaxonomyId ?? defaultTaxonomy!.id,
         scoringConfigId: parsed.scoringConfigId ?? defaultScoringConfig!.id,
         memberships: {

@@ -9,6 +9,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { computeBlocLeaderboard } from "@/server/domain/charts/bloc-leaderboard";
 import { BlocLeaderboardChart } from "@/components/charts/bloc-leaderboard-chart";
 import { StateFlag } from "@/components/state-flag";
+import { blocChamberFilter } from "@/server/domain/leagues/chamber-scope";
 
 export default async function DraftBoardPage({
   params,
@@ -30,8 +31,9 @@ export default async function DraftBoardPage({
   }
 
   const takenBlocIds = draftEvent.picks.map((p) => p.blocId);
+  const chamberFilter = await blocChamberFilter(prisma, draftEvent.season.league.chamberScope);
   const availableBlocs = await prisma.bloc.findMany({
-    where: { taxonomyId: draftEvent.season.league.blocTaxonomyId, id: { notIn: takenBlocIds } },
+    where: { taxonomyId: draftEvent.season.league.blocTaxonomyId, ...chamberFilter, id: { notIn: takenBlocIds } },
     include: { chamber: true },
     orderBy: { draftRank: "asc" },
   });
@@ -46,6 +48,7 @@ export default async function DraftBoardPage({
   };
   const blocLeaderboard = await computeBlocLeaderboard({
     taxonomyId: draftEvent.season.league.blocTaxonomyId,
+    chamberId: chamberFilter.chamberId,
     weights,
   });
 

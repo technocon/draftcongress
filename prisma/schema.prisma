@@ -243,6 +243,18 @@ model Race {
   // (src/server/domain/charts/state-race-map.ts) groups/looks races up by.
   state    String // 2-letter USPS code
   district Int? // 1-based House district (at-large states use 1); null for Senate seats
+  // Real, stable seat identity for Senate rows (null for House) — which of
+  // the three staggered 6-year election classes this SEAT belongs to (not
+  // tied to whoever currently holds it). Class 2 is up in the 2026 cycle;
+  // this is what a league's "Senate seats up this cycle" filter checks.
+  // Sourced from the public-domain unitedstates/congress-legislators
+  // project (see src/lib/senate-classes-by-bioguide.json and
+  // scripts/assign-senate-classes.ts) by matching each seat's CURRENT
+  // officeholder's bioguide to their class — run that script (after
+  // db:import-congress-members) to populate this; null until then. Once
+  // set it doesn't need re-running on a later officeholder change, since
+  // a seat's class is fixed regardless of who holds it.
+  senateClass Int? @map("senate_class")
 
   party                 String // incumbent/leaning party — "D" | "R" | "I"
   rating                RaceRating @default(safe)
@@ -433,6 +445,17 @@ enum RedraftPolicy {
   admin_choice_per_cycle
 }
 
+// Restricts a league to House-only or Senate-only blocs/races, or leaves
+// it unrestricted — chosen at league creation. Bloc is already
+// chamber-scoped (Bloc.chamberId), so this is a straightforward filter
+// wherever "available blocs for this league" is queried (draft pool,
+// start-season sizing check) — see src/server/domain/leagues/create-league.ts.
+enum LeagueChamberScope {
+  all
+  house
+  senate
+}
+
 model League {
   id              String        @id @default(uuid()) @db.Uuid
   tenantId        String        @map("tenant_id") @db.Uuid
@@ -451,8 +474,9 @@ model League {
   // league is referenced. Nullable because leagues created before this
   // field existed have none; the create-league form makes it required
   // for new leagues.
-  homeState       String?       @map("home_state")
-  createdAt       DateTime      @default(now()) @map("created_at")
+  homeState       String?             @map("home_state")
+  chamberScope    LeagueChamberScope  @default(all) @map("chamber_scope")
+  createdAt       DateTime            @default(now()) @map("created_at")
 
   tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   admin         User               @relation("LeagueAdmin", fields: [adminUserId], references: [id])

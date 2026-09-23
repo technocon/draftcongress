@@ -5,6 +5,7 @@ import { DraftError } from "./errors";
 import { recordPick } from "./record-pick";
 import { resolveExpiredPicks } from "./auto-pick";
 import { computeTotalPicks } from "./draft-math";
+import { blocChamberFilter } from "../leagues/chamber-scope";
 
 /**
  * User-submitted draft pick (SRD B1). See the architecture plan §5 for the
@@ -36,6 +37,10 @@ export async function submitDraftPick(tenantId: string, userId: string, draftEve
     if (!bloc) throw new DraftError("Bloc not found");
     if (bloc.taxonomyId !== draftEvent.season.league.blocTaxonomyId) {
       throw new DraftError("This bloc is not part of the league's draft pool");
+    }
+    const chamberFilter = await blocChamberFilter(prisma, draftEvent.season.league.chamberScope);
+    if (chamberFilter.chamberId && bloc.chamberId !== chamberFilter.chamberId) {
+      throw new DraftError(`This league is scoped to ${draftEvent.season.league.chamberScope} blocs only`);
     }
     // B4: free-tier leagues only see chamber/leadership blocs; paid-tier
     // blocs require the picking user's OWN entitlement, re-resolved here

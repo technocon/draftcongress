@@ -6,6 +6,16 @@ import { withTenant } from "@/server/db/tenant-client";
 import { joinLeagueAction, startSeasonAction, inviteOwnerAction } from "@/server/actions/leagues";
 import { StateFlag } from "@/components/state-flag";
 
+/** Points a league's "View races" link at /congress pre-scoped to match
+ * its chamberScope — senate leagues also get upOnly=true since a
+ * Senate-scoped league only cares about seats actually up this cycle
+ * (draftable blocs aren't per-seat, but the race map is). */
+function congressLinkForScope(chamberScope: "all" | "house" | "senate"): string {
+  if (chamberScope === "house") return "/congress?chamber=house";
+  if (chamberScope === "senate") return "/congress?chamber=senate&upOnly=true";
+  return "/congress";
+}
+
 export default async function LeagueDetailPage({
   params,
   searchParams,
@@ -56,8 +66,12 @@ export default async function LeagueDetailPage({
           <h1 className="text-2xl font-semibold">{league.name}</h1>
           <p className="text-sm text-[var(--color-ink-soft)] mt-1">
             {league.draftFormat} draft · {league.rosterSize}-bloc rosters · {league.blocTaxonomy.name} ·{" "}
-            {league.isPrivate ? "Private" : "Public"} · {league.redraftPolicy.replace(/_/g, " ")}
+            {league.isPrivate ? "Private" : "Public"} · {league.redraftPolicy.replace(/_/g, " ")} ·{" "}
+            {league.chamberScope === "all" ? "House & Senate" : league.chamberScope === "house" ? "House only" : "Senate only"}
           </p>
+          <Link href={congressLinkForScope(league.chamberScope)} className="headline-link text-xs">
+            View this league&apos;s races →
+          </Link>
         </div>
       </div>
 
