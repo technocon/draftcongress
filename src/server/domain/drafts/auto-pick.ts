@@ -42,18 +42,22 @@ async function pickBestAvailableBloc(
 }
 
 /**
- * Resolves every currently-overdue pick on a draft, oldest first, via
- * auto-pick. Called two ways (SRD B2's fallback, without any persistent
- * worker — see the architecture plan §5/§8):
+ * Resolves every pick on a draft that's ready for auto-pick, oldest first
+ * — either because it's genuinely overdue, OR because the current picker
+ * is a bot (User.isBot — see that field's comment), which never waits out
+ * its timer at all. Called three ways (SRD B2's fallback, without any
+ * persistent worker — see the architecture plan §5/§8):
  *   1. Lazily, at the top of every draft-state read/pick submission — see
- *      ./get-draft-state.ts and ./submit-pick.ts.
+ *      ./get-draft-state.ts and ./submit-pick.ts. This is also what makes
+ *      bot turns resolve "instantly" in practice: the next read/submit
+ *      after a human's pick advances the turn to a bot picks it up here.
  *   2. By the /api/jobs/draft-sweep route on an external cron schedule, so
  *      a draft still advances even if nobody is actively polling it.
  *
  * Loops (each iteration in its own transaction, re-reading fresh state)
- * because more than one pick can be overdue if the sweep hasn't run in a
- * while — e.g. a 24h pick timer plus an hourly sweep could leave several
- * picks needing resolution at once.
+ * because more than one pick can be ready at once — e.g. several
+ * consecutive bots in the pick order, or a 24h pick timer plus an hourly
+ * sweep leaving multiple overdue human picks.
  */
 export async function resolveExpiredPicks(tenantId: string, draftEventId: string): Promise<number> {
   let resolvedCount = 0;
@@ -66,8 +70,11 @@ export async function resolveExpiredPicks(tenantId: string, draftEventId: string
       });
 
       if (draftEvent.status !== "in_progress") return false;
-      if (!draftEvent.currentPickDeadlineAt || draftEvent.currentPickDeadlineAt > new Date()) return false;
       if (!draftEvent.currentPickerUserId) return false;
+
+      const picker = await tx.user.findUnique({ where: { id: draftEvent.currentPickerUserId }, select: { isBot: true } });
+      const deadlinePassed = Boolean(draftEvent.currentPickDeadlineAt && draftEvent.currentPickDeadlineAt <= new Date());
+      if (!picker?.isBot && !deadlinePassed) return false;
 
       const pickOrder = draftEvent.pickOrder as string[];
       const totalPicks = await computeTotalPicks(tx, draftEvent.seasonId, draftEvent.season.league.rosterSize, pickOrder.length);

@@ -37,6 +37,14 @@ model User {
   emailVerified DateTime? @map("email_verified")
   image         String?
   passwordHash  String?   @map("password_hash")
+  // Synthetic opponent, created only via create-league.ts's botCount option
+  // (see src/server/domain/leagues/create-league.ts) — has no email/
+  // passwordHash/Account, so it can never actually sign in. Auto-picks the
+  // instant it's its turn in a draft (src/server/domain/drafts/auto-pick.ts),
+  // never waiting out the pick-timer like a real owner would. Otherwise a
+  // completely normal User/LeagueMembership/Roster — scoring, standings,
+  // and the draft engine don't need to know the difference.
+  isBot         Boolean   @default(false) @map("is_bot")
   createdAt     DateTime  @default(now()) @map("created_at")
 
   accounts          Account[]

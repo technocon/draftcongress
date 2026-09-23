@@ -26,6 +26,7 @@ export async function createLeagueAction(formData: FormData) {
   const homeState = homeStateRaw || undefined;
   const chamberScopeRaw = formData.get("chamberScope");
   const chamberScope = chamberScopeRaw === "house" || chamberScopeRaw === "senate" ? chamberScopeRaw : "all";
+  const botCount = Number(formData.get("botCount") ?? 0);
 
   let leagueId: string;
   try {
@@ -36,6 +37,7 @@ export async function createLeagueAction(formData: FormData) {
       redraftPolicy,
       homeState,
       chamberScope,
+      botCount,
     });
     leagueId = league.id;
   } catch (err) {

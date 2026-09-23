@@ -82,6 +82,14 @@ export default async function LeaguesPage({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
+            Bot opponents
+            <input name="botCount" type="number" defaultValue={0} min={0} max={7} className="rc-input" />
+            <span className="text-xs text-[var(--color-ink-soft)] font-normal">
+              Optional — bots auto-pick instantly and count toward roster totals, so you can draft solo with no
+              friends required.
+            </span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
             Redraft policy
             <select name="redraftPolicy" defaultValue="full_redraft" className="rc-input">
               <option value="full_redraft">Full redraft each cycle</option>

@@ -17,6 +17,11 @@ const createLeagueSchema = z.object({
   /** Restricts the league to House-only or Senate-only blocs — see
    * League.chamberScope in schema.prisma. */
   chamberScope: z.enum(["all", "house", "senate"]).default("all"),
+  /** Number of bot opponents (User.isBot) to create and seat as owners
+   * alongside the admin — lets a solo player draft/compete against
+   * something immediately, no friends required. See User.isBot's comment
+   * for how bots behave in the draft. */
+  botCount: z.number().int().min(0).max(7).default(0),
   /** Defaults to the platform-default free taxonomy/scoring config if omitted — SRD A2's "sensible defaults, under 2 minutes." */
   blocTaxonomyId: z.string().uuid().optional(),
   scoringConfigId: z.string().uuid().optional(),
@@ -62,13 +67,26 @@ export async function createLeague(tenantId: string, adminUserId: string, input:
       include: { memberships: true },
     });
 
+    // Bots are real Users (so every other part of the system — rosters,
+    // draft turns, scoring, standings — treats them exactly like a human
+    // owner) with no email/passwordHash, so they can never sign in.
+    // TenantMembership is required the same way registerUser's is (RLS-
+    // enforced, see that function's comment) — created here in the same
+    // tenant-scoped transaction rather than relying on any sign-in hook,
+    // since a bot never signs in.
+    for (let i = 1; i <= parsed.botCount; i++) {
+      const bot = await tx.user.create({ data: { name: `Bot ${i}`, isBot: true } });
+      await tx.tenantMembership.create({ data: { tenantId, userId: bot.id, role: "member" } });
+      await tx.leagueMembership.create({ data: { tenantId, leagueId: league.id, userId: bot.id, role: "owner" } });
+    }
+
     await writeAuditLog(tx, {
       tenantId,
       actorUserId: adminUserId,
       action: "league.created",
       entityType: "League",
       entityId: league.id,
-      after: { name: league.name, rosterSize: league.rosterSize, isPrivate: league.isPrivate },
+      after: { name: league.name, rosterSize: league.rosterSize, isPrivate: league.isPrivate, botCount: parsed.botCount },
       source: "user",
     });
 
