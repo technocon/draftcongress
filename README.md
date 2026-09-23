@@ -1,5 +1,8 @@
 # Draft Congress
 
+Shield: [![CC BY-NC-ND 4.0][cc-by-nc-nd-shield]][cc-by-nc-nd]
+
+
 Fantasy sports mechanics, applied to legislative blocs. Full product context is in the SRD at
 `../SRD_Multi_Tenant_Fantasy_Politics.md`; the architecture decisions behind this codebase are in the plan this was
 built from (ask whoever ran the build for the plan file, or see the commit history — each commit maps to one
@@ -151,3 +154,14 @@ production.
 tenant RLS isolation (including the fail-closed-on-reused-connection case), the fixture-driven scoring ingestion
 pipeline end to end, and a full async draft (league → season → draft → picks → completion → standings, plus
 rejection cases for out-of-turn picks, missing entitlement, and an over-subscribed roster size).
+
+## License
+
+This work is licensed under a
+[Creative Commons Attribution-NonCommercial-NoDerivs 4.0 International License][cc-by-nc-nd].
+
+[![CC BY-NC-ND 4.0][cc-by-nc-nd-image]][cc-by-nc-nd]
+
+[cc-by-nc-nd]: http://creativecommons.org/licenses/by-nc-nd/4.0/
+[cc-by-nc-nd-image]: https://licensebuttons.net/l/by-nc-nd/4.0/88x31.png
+[cc-by-nc-nd-shield]: https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg
